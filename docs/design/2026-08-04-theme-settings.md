@@ -22,6 +22,7 @@ tags: [settings, dock, theme.js]
 | 2026-08-04 | 已选中 dock 图标再点：document 冒泡阶段 stopPropagation，不收起侧栏；折叠仅由顶栏两按钮经 toggleModel 完成 |
 | 2026-08-04 | 配置改为 `/api/file` 写入 `/data/storage/theme/starter/config.json`；启动时读文件，并迁移旧 localStorage |
 | 2026-08-04 | 配置路径改为 `/data/storage/theme/cursorart/config.json`；启动时若仅有旧 `starter` 路径则迁入新路径 |
+| 2026-08-05 | 设置对话框底部显示配置保存路径 |
 
 ## 背景信息
 
@@ -38,6 +39,7 @@ tags: [settings, dock, theme.js]
 
 - DIY `.b3-dialog`（取消 / 保存），不依赖 `import { Dialog, Setting } from "siyuan"`
 - 列出当前 DOM 中全部 `.dock__item[data-type]`（排除 pin）；开关打开 = 显示，关闭 = 隐藏
+- 底部「配置保存位置」展示工作区相对路径 `CONFIG_PATH`（可复制）
 
 **生效与持久化**
 
@@ -67,13 +69,14 @@ tags: [settings, dock, theme.js]
 
 1. 开启「加载主题 JS」，reload
 2. 点顶栏插件图标 → 菜单末应有「cursor极简 设置」
-3. 打开设置，关闭「标签」「收集箱」等开关并保存 → 对应侧栏图标消失
-4. 再打开设置打开开关并保存 → 图标恢复
-5. 切换主题离开 starter → 隐藏样式与菜单挂钩应被 `destroyTheme` 清掉
-6. 再点已选中的侧栏工具图标，侧栏不应收起；仅顶栏左右面板按钮可折叠
+3. 打开设置，对话框底部应显示配置路径 `/data/storage/theme/cursorart/config.json`
+4. 打开设置，关闭「标签」「收集箱」等开关并保存 → 对应侧栏图标消失
+5. 再打开设置打开开关并保存 → 图标恢复
+6. 切换主题离开 starter → 隐藏样式与菜单挂钩应被 `destroyTheme` 清掉
+7. 再点已选中的侧栏工具图标，侧栏不应收起；仅顶栏左右面板按钮可折叠
 
-7. 保存后重启思源，隐藏配置应仍在（检查工作区 `data/storage/theme/cursorart/config.json`）
-8. 若工作区仅有旧 `data/storage/theme/starter/config.json`，首次加载后应出现新路径文件且设置仍生效
+8. 保存后重启思源，隐藏配置应仍在（检查工作区 `data/storage/theme/cursorart/config.json`）
+9. 若工作区仅有旧 `data/storage/theme/starter/config.json`，首次加载后应出现新路径文件且设置仍生效
 
 ## 其他说明
 

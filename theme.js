@@ -329,6 +329,10 @@
         <div class="b3-label__text">开关打开 = 显示该工具图标；关闭 = 隐藏（仅本主题生效）</div>
       </div>
       ${rows}
+      <div class="b3-label" style="margin-top:8px">
+        配置保存位置
+        <div class="b3-label__text" style="word-break:break-all;user-select:text">${CONFIG_PATH}</div>
+      </div>
     </div>
     <div class="b3-dialog__action">
       <button class="b3-button b3-button--cancel" data-starter-dlg="cancel">${cancelText}</button>

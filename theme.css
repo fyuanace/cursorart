@@ -11,6 +11,7 @@
  *   └──────────┴───────────────┴─────────────┘
  *
  * 开发：改完后 Network 勾 Disable cache，控制台 location.reload()
+ * 左/右 dock 横条在对应侧栏顶部（.layout__dockl / .layout__dockr 内），依赖 theme.js
  */
 
 :root {
@@ -100,8 +101,8 @@ body.body--toolbar-hide::after {
  * ② / ④ 与顶栏对齐
  * ========================================================= */
 
-body.body--toolbar-hide #dockLeft,
-body.body--toolbar-hide #dockRight {
+body.body--toolbar-hide #dockRight:not(.starter-dock--sidebar-top),
+body.body--toolbar-hide #dockLeft:not(.starter-dock--sidebar-top) {
     height: calc(100% - var(--starter-topbar-height));
     margin-top: var(--starter-topbar-height);
 }
@@ -109,6 +110,98 @@ body.body--toolbar-hide #dockRight {
 body.body--toolbar-hide .layout__dockl:not(.layout--float),
 body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     margin-top: var(--starter-topbar-height);
+}
+
+/* =========================================================
+ * 左/右 dock → 对应侧栏顶部横向条
+ * DOM：theme.js 将 #dockLeft/#dockRight 插入 .layout__dockl/.layout__dockr 首子节点
+ * ========================================================= */
+
+.layout__dockl.starter-dock-panel--with-top,
+.layout__dockr.starter-dock-panel--with-top {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.layout__dockl.starter-dock-panel--with-top > #dockLeft.starter-dock--sidebar-top,
+.layout__dockr.starter-dock-panel--with-top > #dockRight.starter-dock--sidebar-top {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    flex-shrink: 0;
+    width: 100%;
+    height: var(--starter-topbar-height);
+    min-height: var(--starter-topbar-height);
+    margin: 0;
+    padding: 0 4px;
+    box-sizing: border-box;
+    overflow: hidden;
+    border: none;
+    border-bottom: 1px solid var(--b3-border-color);
+    background-color: var(--b3-theme-background);
+}
+
+.layout__dockl.starter-dock-panel--with-top > #dockLeft.starter-dock--sidebar-top ~ *,
+.layout__dockr.starter-dock-panel--with-top > #dockRight.starter-dock--sidebar-top ~ * {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+}
+
+.layout__dockl > #dockLeft.starter-dock--sidebar-top .dock__items,
+.layout__dockr > #dockRight.starter-dock--sidebar-top .dock__items {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.layout__dockl > #dockLeft.starter-dock--sidebar-top .dock__item,
+.layout__dockr > #dockRight.starter-dock--sidebar-top .dock__item {
+    margin: 2px;
+    padding: 4px;
+}
+
+.layout__dockl > #dockLeft.starter-dock--sidebar-top .dock__item--space,
+.layout__dockr > #dockRight.starter-dock--sidebar-top .dock__item--space {
+    display: none;
+}
+
+.layout__dockl > #dockLeft.starter-dock--sidebar-top .dock__split,
+.layout__dockr > #dockRight.starter-dock--sidebar-top .dock__split {
+    width: 12px;
+    height: var(--starter-topbar-height);
+    flex-shrink: 0;
+}
+
+.layout__dockl > #dockLeft.starter-dock--sidebar-top .dock__split::after,
+.layout__dockr > #dockRight.starter-dock--sidebar-top .dock__split::after {
+    width: 1px;
+    height: 14px;
+    background: var(--b3-theme-on-surface-lighter);
+}
+
+/* =========================================================
+ * 顶栏：左右侧栏显隐按钮（导航与文档 Tab 之间）
+ * 图标复用官方 #iconPanelLeft / #iconPanelRight
+ * ========================================================= */
+
+#starterSideToggles {
+    position: relative;
+    z-index: 2;
+    align-items: center;
+    flex-shrink: 0;
+    margin: 0 2px;
+    pointer-events: auto;
+    -webkit-app-region: no-drag;
+}
+
+#starterSideToggles .starter-side-toggle {
+    pointer-events: auto;
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
 }
 
 /* =========================================================

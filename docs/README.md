@@ -6,10 +6,10 @@
 
 | 区 | 界面 | DOM 锚点 | 文档 |
 |----|------|----------|------|
-| ① 顶栏 | 全宽标题区（隐藏顶栏时含文档 Tab） | `#toolbar` | [design/2026-08-04-toolbar-titlebar.md](design/2026-08-04-toolbar-titlebar.md) |
-| ② 左侧栏 | 左 dock + 文档树 | `#dockLeft`、`.layout__dockl` | 同上 |
+| ① 顶栏 | 全宽标题区（含文档 Tab） | `#toolbar` | [design/2026-08-04-toolbar-titlebar.md](design/2026-08-04-toolbar-titlebar.md) |
+| ② 左侧栏 | 顶：横向左 dock；下：文档树 | `#dockLeft` + `.layout__dockl` | 同上 |
 | ③ 中间区 | 编辑正文 | `.layout__center` / `.layout-tab-container` | 同上 |
-| ④ 右侧栏 | 右 dock + 大纲等 | `#dockRight`、`.layout__dockr` | 同上 |
+| ④ 右侧栏 | 顶：横向右 dock；下：大纲等 | `#dockRight` + `.layout__dockr` | 同上 |
 
 ```
 ┌──────────────── ① 顶栏 ────────────────┐
@@ -21,7 +21,7 @@
 ## 整体架构
 
 - 默认层：`appearance/themes/daylight/theme.css`（思源自动加载）
-- 覆盖层：本目录 `theme.css`（仅布局：间隙、直角、顶栏高度、分区线）
+- 覆盖层：`theme.css` + `theme.js`（侧栏顶横条 dock；顶栏左右侧栏显隐按钮）
 - 分区线颜色：`var(--b3-border-color)`（daylight）
 - 面板底色：`var(--b3-theme-background)`（daylight）
 - 自有令牌：仅 `--starter-topbar-height`

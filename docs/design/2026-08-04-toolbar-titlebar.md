@@ -17,7 +17,7 @@ tags: [layout, toolbar, regions, daylight]
 | 时间 | 说明 |
 |------|------|
 | 2026-08-04 | 曾把线画在 `#toolbar` border 或 `layout-tab-container` 顶边，隐藏顶栏时被激活 Tab 盖住或无法形成全宽顶栏分割 |
-| 2026-08-04 | 配色改为完全复用 daylight：去掉自有主色/硬编码白；分区线用 `--b3-border-color`，底色用 `--b3-theme-background` |
+| 2026-08-04 | 侧栏开关：折叠点当前激活 dock 项，展开还原隐藏前选中项；顶栏两按钮固定默认样式 |
 
 ## 背景信息
 
@@ -45,6 +45,23 @@ tags: [layout, toolbar, regions, daylight]
 
 显示顶栏时：① 仅为 `#toolbar`（28px），底线同样 `var(--b3-border-color)`；Tab 归 ③。
 
+**顶栏侧栏开关（theme.js）**：
+
+- 位置：`#toolbar` 内、`#drag` 之前（导航箭头与文档 Tab 之间）
+- 控件：`div.toolbar__item`，始终默认样式（不切换 `--active`）
+- 交互：`pointerdown`；语义等同再点一次 dock 图标：`toggleModel(type, false, true)`
+- 折叠：对「当前选中」项执行（如标签 → 再点标签收起）
+- 展开：对「上一次选中」项执行（记住隐藏前的面板；用户点过 dock 图标也会更新记忆）
+- 仅当尚无记忆时才回落左 `file` / 右 `outline`
+
+**左/右 dock 横条（theme.js）**：
+
+- 左：`#dockLeft` → `.layout__dockl` 首子节点
+- 右：`#dockRight` → `.layout__dockr` 首子节点
+- 样式：侧栏纵向 flex；dock 横向条 + `border-bottom`
+- 卸载：`window.destroyTheme` 两侧与顶栏按钮一并还原
+- 注意：关闭对应侧栏时，该侧横条会一并隐藏
+
 **原则**：本主题不定义独立色板；主色、边框、表面色全部来自下层 daylight。
 
 ## 其他模块引用约束
@@ -56,11 +73,12 @@ tags: [layout, toolbar, regions, daylight]
 
 ## 工程师测试验收方法
 
-1. 主题选「入门主题模板」，保持隐藏顶栏
-2. Disable cache 后 `location.reload()`
+1. 主题选「入门主题模板」，保持隐藏顶栏；外观中开启「加载主题 JS」
+2. Disable cache 后 `location.reload()`（或确认主题版本已升到带 `?v=` 缓存戳的新版本）
 3. 顶栏下方应有一条贯穿左中右的 1px 横线；激活文档 Tab 不能盖住该线
 4. 左栏 / 中栏 / 右栏之间竖线清晰；左栏、右栏顶边与顶栏底线对齐
-5. 关闭「隐藏顶栏」后，横线仍在 `#toolbar` 底边，高度约 28px
+5. 点顶栏左右面板图标：折叠收起当前面板；再点应恢复隐藏前选中的那一项（如标签不会变成文档树）；按钮本身无按下高亮
+6. 关闭「隐藏顶栏」后，横线仍在 `#toolbar` 底边，高度约 28px
 
 ## 其他说明
 

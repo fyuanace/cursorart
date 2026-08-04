@@ -1,8 +1,8 @@
 ﻿/*
- * starter — 叠在 daylight（themeDefaultStyle）之上的布局主题
+ * cursor极简 — 叠在官方默认主题之上的布局主题
  *
- * 配色 / 字体 / 组件变量一律复用 daylight，本文件只改分区布局。
- * 思源加载顺序：daylight/theme.css → 本文件（themeStyle）
+ * 亮色：daylight → 本文件；暗色：midnight → 本文件
+ * 配色 / 字体 / 组件变量一律复用下层官方主题，本文件只改分区布局。
  *
  * 分区模型：
  *   ┌──────────────── 1 顶栏 ────────────────┐
@@ -18,14 +18,25 @@
     /* 唯一自有令牌：隐藏顶栏时顶栏占位（官方 42px，压矮 4px） */
     --starter-topbar-height: 38px;
 
-    /* 取消圆角卡片托盘：间隙归零；底色跟 daylight 面板白；关掉左上角高光 */
+    /* 取消圆角卡片托盘：间隙归零；底色跟面板；关掉左上角高光 */
     --b3-layout-space: 0px;
     --b3-layout-space-margin: 0px;
     --b3-body-background: var(--b3-theme-background);
     --b3-body-background-hl-opacity: 0;
 }
 
-/* 取消官方 body 径向渐变，底色用 daylight 的 --b3-theme-background */
+/* 亮色 / 暗色底：统一面板与窗体背景 */
+:root[data-theme-mode="light"] {
+    --b3-theme-background: #fafafd;
+    --b3-body-background: #fafafd;
+}
+
+:root[data-theme-mode="dark"] {
+    --b3-theme-background: #191a1b;
+    --b3-body-background: #191a1b;
+}
+
+/* 取消官方 body 径向渐变，底色跟当前模式的 --b3-theme-background */
 body {
     background-color: var(--b3-theme-background);
     background-image: none;
@@ -163,7 +174,7 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     padding: 4px;
 }
 
-/* daylight 的 --b3-toolbar-hover 近白，叠在白底侧栏上看不见选中态 */
+/* daylight 近白 / midnight 近透明的 toolbar-hover 在侧栏顶条上对比不足，统一用 list-hover */
 .layout__dockl > #dockLeft.starter-dock--sidebar-top .dock__item:hover:not(.dock__item--activefocus),
 .layout__dockl > #dockLeft.starter-dock--sidebar-top .dock__item--active,
 .layout__dockr > #dockRight.starter-dock--sidebar-top .dock__item:hover:not(.dock__item--activefocus),
@@ -191,21 +202,15 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
 }
 
 /* =========================================================
- * 顶栏：左右侧栏显隐按钮（导航与文档 Tab 之间）
- * 图标复用官方 #iconPanelLeft / #iconPanelRight
+ * 顶栏：左右侧栏显隐按钮
+ * 左：#barWorkspace（思源标题）后；右：#windowControls（最小化）前
  * ========================================================= */
 
-#starterSideToggles {
+#starterToggleLeft,
+#starterToggleRight {
     position: relative;
     z-index: 2;
-    align-items: center;
     flex-shrink: 0;
-    margin: 0 2px;
-    pointer-events: auto;
-    -webkit-app-region: no-drag;
-}
-
-#starterSideToggles .starter-side-toggle {
     pointer-events: auto;
     -webkit-app-region: no-drag;
     app-region: no-drag;

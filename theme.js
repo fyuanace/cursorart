@@ -1,15 +1,18 @@
 /**
- * starter —
+ * cursor极简 —
  * 1) 左/右 dock 图标挂到对应侧栏顶部横条
- * 2) 顶栏左右侧栏显隐按钮
- * 3) 主题设置（入口同插件：#barPlugins 菜单 → Starter 设置）
+ * 2) 顶栏左右侧栏显隐：左在「思源」标题后，右在窗口最小化左侧
+ * 3) 主题设置（入口同插件：#barPlugins 菜单 → cursor极简 设置）
  * 4) 已选中 dock 图标再点不收起侧栏（仅拦 UI click，不改 toggleModel）
  */
 (function () {
     const TOP_CLASS = "starter-dock--sidebar-top";
     const PANEL_CLASS = "starter-dock-panel--with-top";
-    const TOGGLE_WRAP_ID = "starterSideToggles";
-    const STORAGE_KEY = "starter-theme-config";
+    const TOGGLE_LEFT_ID = "starterToggleLeft";
+    const TOGGLE_RIGHT_ID = "starterToggleRight";
+    /** 工作区持久化（重启不丢）；勿用 petal 插件目录 */
+    const CONFIG_PATH = "/data/storage/theme/starter/config.json";
+    const LEGACY_STORAGE_KEY = "starter-theme-config";
     const HIDE_STYLE_ID = "starterHideDockStyle";
     const DIALOG_ID = "starterSettingsDialog";
     const MENU_ITEM_ID = "starter-theme-settings";
@@ -32,7 +35,7 @@
     ];
 
     /** @type {{ hiddenDockTypes: string[] }} */
-    let config = loadConfig();
+    let config = {hiddenDockTypes: []};
 
     /** 每侧记住上一次选中的 dock type（展开时用） */
     const lastType = {
@@ -40,27 +43,87 @@
         rightDock: "outline",
     };
 
-    function loadConfig() {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) {
-                return {hiddenDockTypes: []};
-            }
-            const parsed = JSON.parse(raw);
-            return {
-                hiddenDockTypes: Array.isArray(parsed.hiddenDockTypes)
-                    ? parsed.hiddenDockTypes.filter((t) => typeof t === "string")
-                    : [],
-            };
-        } catch (e) {
-            return {hiddenDockTypes: []};
-        }
-    }
+    const normalizeConfig = (parsed) => ({
+        hiddenDockTypes: Array.isArray(parsed?.hiddenDockTypes)
+            ? parsed.hiddenDockTypes.filter((t) => typeof t === "string")
+            : [],
+    });
 
-    function saveConfig(next) {
-        config = next;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-    }
+    const readLegacyLocal = () => {
+        try {
+            const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+            if (!raw) {
+                return null;
+            }
+            return normalizeConfig(JSON.parse(raw));
+        } catch (e) {
+            return null;
+        }
+    };
+
+    const loadConfigFromFile = async () => {
+        try {
+            const res = await fetch("/api/file/getFile", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({path: CONFIG_PATH}),
+            });
+            const text = await res.text();
+            if (!text) {
+                return null;
+            }
+            const parsed = JSON.parse(text);
+            // 文件不存在等：内核返回 { code, msg, data }
+            if (parsed && typeof parsed.code === "number" && !("hiddenDockTypes" in parsed)) {
+                return null;
+            }
+            return normalizeConfig(parsed);
+        } catch (e) {
+            return null;
+        }
+    };
+
+    const saveConfigToFile = async (next) => {
+        config = normalizeConfig(next);
+        const blob = new Blob([JSON.stringify(config, null, 2)], {type: "application/json"});
+        const fd = new FormData();
+        fd.append("path", CONFIG_PATH);
+        fd.append("file", new File([blob], "config.json", {type: "application/json"}));
+        fd.append("isDir", "false");
+        fd.append("modTime", String(Date.now()));
+        try {
+            const res = await fetch("/api/file/putFile", {method: "POST", body: fd});
+            const result = await res.json();
+            if (result && typeof result.code === "number" && result.code !== 0) {
+                console.warn("[starter] 保存配置失败", result);
+                return false;
+            }
+            try {
+                localStorage.removeItem(LEGACY_STORAGE_KEY);
+            } catch (e) {
+                /* ignore */
+            }
+            return true;
+        } catch (e) {
+            console.warn("[starter] 保存配置失败", e);
+            return false;
+        }
+    };
+
+    const initConfig = async () => {
+        const fromFile = await loadConfigFromFile();
+        if (fromFile) {
+            config = fromFile;
+            return;
+        }
+        const legacy = readLegacyLocal();
+        if (legacy && legacy.hiddenDockTypes.length) {
+            config = legacy;
+            await saveConfigToFile(legacy);
+            return;
+        }
+        config = {hiddenDockTypes: []};
+    };
 
     const getDock = (layoutKey) => window.siyuan?.layout?.[layoutKey];
 
@@ -250,7 +313,7 @@
         dialog.innerHTML = `
 <div class="b3-dialog__scrim" data-starter-dlg="scrim"></div>
 <div class="b3-dialog__container" style="width:min(520px,92vw);max-height:80vh">
-  <div class="b3-dialog__header">Starter 设置</div>
+  <div class="b3-dialog__header">cursor极简 设置</div>
   <div class="b3-dialog__body">
     <div class="b3-dialog__content" style="overflow:auto;max-height:calc(80vh - 100px)">
       <div class="b3-label" style="border-bottom:none;padding-bottom:0">
@@ -290,9 +353,13 @@
                     }
                 });
                 closeIfActiveHidden(hidden);
-                saveConfig({hiddenDockTypes: hidden});
-                applyHiddenDockTypes();
-                onClose();
+                saveConfigToFile({hiddenDockTypes: hidden}).then((ok) => {
+                    applyHiddenDockTypes();
+                    onClose();
+                    if (!ok && window.siyuan?.languages) {
+                        /* 失败已 console.warn；仍关闭对话框以免卡死 */
+                    }
+                });
             }
         };
         const onKey = (e) => {
@@ -324,7 +391,7 @@
         menu.addItem({
             id: MENU_ITEM_ID,
             icon: "iconSettings",
-            label: "Starter 设置",
+            label: "cursor极简 设置",
             click() {
                 openSettingsDialog();
             },
@@ -357,21 +424,28 @@
     };
 
     const unmountToggles = () => {
-        document.getElementById(TOGGLE_WRAP_ID)?.remove();
+        document.getElementById(TOGGLE_LEFT_ID)?.remove();
+        document.getElementById(TOGGLE_RIGHT_ID)?.remove();
+        // 兼容旧版合并容器
+        document.getElementById("starterSideToggles")?.remove();
     };
 
     const mountToggles = () => {
         const toolbar = document.getElementById("toolbar");
-        const drag = document.getElementById("drag");
-        if (!toolbar || !drag) {
+        const barWorkspace = document.getElementById("barWorkspace");
+        const windowControls = document.getElementById("windowControls");
+        if (!toolbar || !barWorkspace || !windowControls) {
             return false;
         }
-        if (document.getElementById(TOGGLE_WRAP_ID)) {
+        if (document.getElementById(TOGGLE_LEFT_ID) && document.getElementById(TOGGLE_RIGHT_ID)) {
             return true;
         }
         if (!window.siyuan?.layout?.leftDock) {
             return false;
         }
+
+        // 清掉旧位置/半残留
+        unmountToggles();
 
         sides.forEach((side) => {
             const dock = getDock(side.layoutKey);
@@ -381,12 +455,9 @@
             }
         });
 
-        const wrap = document.createElement("div");
-        wrap.id = TOGGLE_WRAP_ID;
-        wrap.className = "starter-side-toggles fn__flex";
-
-        const mkBtn = (layoutKey, iconId, label) => {
+        const mkBtn = (id, layoutKey, iconId, label) => {
             const btn = document.createElement("div");
+            btn.id = id;
             btn.className = "toolbar__item ariaLabel starter-side-toggle";
             btn.dataset.starterSide = layoutKey;
             btn.setAttribute("aria-label", label);
@@ -415,9 +486,13 @@
             return btn;
         };
 
-        wrap.appendChild(mkBtn("leftDock", "iconPanelLeft", "显示/隐藏左侧栏"));
-        wrap.appendChild(mkBtn("rightDock", "iconPanelRight", "显示/隐藏右侧栏"));
-        toolbar.insertBefore(wrap, drag);
+        // 左栏：紧挨「思源」标题（#barWorkspace）之后
+        const leftBtn = mkBtn(TOGGLE_LEFT_ID, "leftDock", "iconPanelLeft", "显示/隐藏左侧栏");
+        barWorkspace.insertAdjacentElement("afterend", leftBtn);
+
+        // 右栏：最小化等窗口按钮（#windowControls）左侧
+        const rightBtn = mkBtn(TOGGLE_RIGHT_ID, "rightDock", "iconPanelRight", "显示/隐藏右侧栏");
+        toolbar.insertBefore(rightBtn, windowControls);
         return true;
     };
 
@@ -472,7 +547,8 @@
 
     const mountAllDocks = () => sides.every((side) => mountOne(side));
 
-    const tryMount = () => {
+    const tryMount = async () => {
+        await initConfig();
         applyHiddenDockTypes();
         const okDocks = mountAllDocks();
         const okToggles = mountToggles();

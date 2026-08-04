@@ -1,11 +1,11 @@
 ---
 type: design-change
-project: starter
+project: cursor-minimal
 module: layout-regions
 date: 2026-08-04
 status: implemented
 summary: >
-  叠在 daylight 上的四分区布局：配色复用官方亮色变量；仅覆盖间隙、直角面板与顶栏/分栏线。
+  cursor极简：叠在 daylight/midnight 上的四分区布局；配色复用官方变量；仅覆盖间隙、直角面板与顶栏/分栏线。
 related: []
 tags: [layout, toolbar, regions, daylight]
 ---
@@ -18,6 +18,8 @@ tags: [layout, toolbar, regions, daylight]
 |------|------|
 | 2026-08-04 | 曾把线画在 `#toolbar` border 或 `layout-tab-container` 顶边，隐藏顶栏时被激活 Tab 盖住或无法形成全宽顶栏分割 |
 | 2026-08-04 | 侧栏开关：折叠点当前激活 dock 项，展开还原隐藏前选中项；顶栏两按钮固定默认样式 |
+| 2026-08-04 | 左按钮移到思源标题后，右按钮移到窗口最小化左侧 |
+| 2026-08-04 | 显示名改为 cursor极简；`modes` 增加 dark（暗色叠 midnight） |
 
 ## 背景信息
 
@@ -47,7 +49,8 @@ tags: [layout, toolbar, regions, daylight]
 
 **顶栏侧栏开关（theme.js）**：
 
-- 位置：`#toolbar` 内、`#drag` 之前（导航箭头与文档 Tab 之间）
+- 左：`#starterToggleLeft`，插在 `#barWorkspace`（思源标题）之后
+- 右：`#starterToggleRight`，插在 `#windowControls`（最小化等）之前
 - 控件：`div.toolbar__item`，始终默认样式（不切换 `--active`）
 - 交互：`pointerdown`；语义等同再点一次 dock 图标：`toggleModel(type, false, true)`
 - 折叠：对「当前选中」项执行（如标签 → 再点标签收起）
@@ -73,7 +76,7 @@ tags: [layout, toolbar, regions, daylight]
 
 ## 工程师测试验收方法
 
-1. 主题选「入门主题模板」，保持隐藏顶栏；外观中开启「加载主题 JS」
+1. 主题选「cursor极简」，保持隐藏顶栏；外观中开启「加载主题 JS」；亮色/暗色主题均选本主题
 2. Disable cache 后 `location.reload()`（或确认主题版本已升到带 `?v=` 缓存戳的新版本）
 3. 顶栏下方应有一条贯穿左中右的 1px 横线；激活文档 Tab 不能盖住该线
 4. 左栏 / 中栏 / 右栏之间竖线清晰；左栏、右栏顶边与顶栏底线对齐

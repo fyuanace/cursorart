@@ -1,6 +1,6 @@
-# starter 主题
+# cursor极简
 
-叠在官方 **daylight**（`themeDefaultStyle`）之上的布局主题：配色/字体/组件变量复用 daylight，本主题只改四分区布局。
+类 Cursor 的极简四分区布局：配色复用官方 **daylight**（亮）/ **midnight**（暗），本主题只改布局与交互。
 
 ## 分区地图
 
@@ -20,9 +20,10 @@
 
 ## 整体架构
 
-- 默认层：`appearance/themes/daylight/theme.css`（思源自动加载）
+- 默认层：亮色 `daylight/theme.css`；暗色 `midnight/theme.css`（思源按模式自动加载）
 - 覆盖层：`theme.css` + `theme.js`（侧栏顶横条 dock；顶栏左右侧栏显隐；主题设置隐藏 dock 工具）
-- 分区线颜色：`var(--b3-border-color)`（daylight）
-- 面板底色：`var(--b3-theme-background)`（daylight）
+- 分区线颜色：`var(--b3-border-color)`
+- 面板底色：`var(--b3-theme-background)`
 - 自有令牌：仅 `--starter-topbar-height`
-- 设置入口：顶栏 `#barPlugins` 菜单 →「Starter 设置」（见 [design/2026-08-04-theme-settings.md](design/2026-08-04-theme-settings.md)）
+- 设置入口：顶栏 `#barPlugins` 菜单 →「cursor极简 设置」（见 [design/2026-08-04-theme-settings.md](design/2026-08-04-theme-settings.md)）
+- 文件夹内部名仍为 `starter`（与 `theme.json` 的 `name` 一致）；界面显示名为 cursor极简

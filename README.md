@@ -1,19 +1,20 @@
-# Starter
+# cursor极简
 
-Layout overlay on official **daylight**. Colors and component tokens come from daylight; this theme only changes the four-region layout.
+Layout overlay on official **daylight** (light) / **midnight** (dark). Colors and component tokens come from the base theme; this theme only changes the four-region layout.
 
 ## Develop
 
-1. Edit `theme.css` (layout overrides only; prefer daylight CSS variables for color).
-2. In SiYuan: **Settings → Appearance → Theme** → select **Starter**.
+1. Edit `theme.css` (layout overrides only; prefer CSS variables for color).
+2. In SiYuan: **Settings → Appearance** → set light/dark theme to **cursor极简**.
 3. DevTools (`Ctrl+Shift+I`) → disable cache → `location.reload()`.
 
 ## Files
 
 | File | Role |
 |------|------|
-| `theme.json` | Metadata |
-| `theme.css` | Layout overlay on daylight |
+| `theme.json` | Metadata (`modes`: light + dark) |
+| `theme.css` | Layout overlay |
+| `theme.js` | Dock strip, side toggles, settings |
 | `icon.png` | Bazaar / list icon |
 | `preview.png` | Bazaar preview |
 

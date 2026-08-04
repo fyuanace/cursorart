@@ -163,6 +163,14 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     padding: 4px;
 }
 
+/* daylight 的 --b3-toolbar-hover 近白，叠在白底侧栏上看不见选中态 */
+.layout__dockl > #dockLeft.starter-dock--sidebar-top .dock__item:hover:not(.dock__item--activefocus),
+.layout__dockl > #dockLeft.starter-dock--sidebar-top .dock__item--active,
+.layout__dockr > #dockRight.starter-dock--sidebar-top .dock__item:hover:not(.dock__item--activefocus),
+.layout__dockr > #dockRight.starter-dock--sidebar-top .dock__item--active {
+    background-color: var(--b3-list-hover);
+}
+
 .layout__dockl > #dockLeft.starter-dock--sidebar-top .dock__item--space,
 .layout__dockr > #dockRight.starter-dock--sidebar-top .dock__item--space {
     display: none;

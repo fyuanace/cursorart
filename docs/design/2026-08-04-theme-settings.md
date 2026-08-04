@@ -19,6 +19,7 @@ tags: [settings, dock, theme.js]
 |------|------|
 | 2026-08-04 | 首版：#barPlugins 菜单项 + DIY 对话框；按 data-type 隐藏 dock 图标 |
 | 2026-08-04 | 开关语义改为：打开=显示，关闭=隐藏（与当前可见状态一致） |
+| 2026-08-04 | 已选中 dock 图标再点：document 冒泡阶段 stopPropagation，不收起侧栏；折叠仅由顶栏两按钮经 toggleModel 完成 |
 
 ## 背景信息
 
@@ -47,6 +48,12 @@ tags: [settings, dock, theme.js]
 
 - `destroyTheme` 移除菜单监听、对话框、隐藏样式
 
+**已选中图标再点**
+
+- 不 hook / 不改写 `Dock.toggleModel`
+- 仅在 `document` 冒泡阶段拦截 `.dock__item--active` 的 click（`stopPropagation`），使 `window` 上 `globalClick` 收不到事件，故不会 `toggleModel(type, false, true)` 收起
+- 顶栏左右显隐仍直接调用 `toggleModel`，不受影响；切换到其它未选中图标仍走官方逻辑
+
 ## 其他模块引用约束
 
 - 隐藏只动图标显示，不删 DOM、不改思源 layout 数据
@@ -59,6 +66,7 @@ tags: [settings, dock, theme.js]
 3. 打开设置，关闭「标签」「收集箱」等开关并保存 → 对应侧栏图标消失
 4. 再打开设置打开开关并保存 → 图标恢复
 5. 切换主题离开 starter → 隐藏样式与菜单挂钩应被 `destroyTheme` 清掉
+6. 再点已选中的侧栏工具图标，侧栏不应收起；仅顶栏左右面板按钮可折叠
 
 ## 其他说明
 

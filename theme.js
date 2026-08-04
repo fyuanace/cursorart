@@ -3,6 +3,7 @@
  * 1) 左/右 dock 图标挂到对应侧栏顶部横条
  * 2) 顶栏左右侧栏显隐按钮
  * 3) 主题设置（入口同插件：#barPlugins 菜单 → Starter 设置）
+ * 4) 已选中 dock 图标再点不收起侧栏（仅拦 UI click，不改 toggleModel）
  */
 (function () {
     const TOP_CLASS = "starter-dock--sidebar-top";
@@ -147,6 +148,23 @@
                 break;
             }
         }
+    };
+
+    /**
+     * 表层限制：已激活的 dock 图标再点时，拦住 click 冒泡到 window.globalClick，
+     * 从而不会走 toggleModel(type, false, true) 收起侧栏。
+     * 不改写 Dock.toggleModel / 不 hook 官方逻辑 → 顶栏两按钮直接调 API 仍可折叠。
+     * 监听在 document 冒泡阶段（早于 window 上的 globalClick）。
+     */
+    const suppressActiveDockCollapse = (e) => {
+        const item = e.target?.closest?.(".dock__item[data-type]");
+        if (!item || item.classList.contains("dock__item--pin")) {
+            return;
+        }
+        if (!item.classList.contains("dock__item--active")) {
+            return;
+        }
+        e.stopPropagation();
     };
 
     /** 若正在显示将被隐藏的面板，先收起 */
@@ -476,9 +494,11 @@
     };
 
     document.addEventListener("click", rememberDockClick, true);
+    document.addEventListener("click", suppressActiveDockCollapse, false);
 
     window.destroyTheme = async () => {
         document.removeEventListener("click", rememberDockClick, true);
+        document.removeEventListener("click", suppressActiveDockCollapse, false);
         unbindPluginsMenu();
         closeSettingsDialog();
         document.getElementById(HIDE_STYLE_ID)?.remove();

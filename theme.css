@@ -1,0 +1,209 @@
+﻿/*
+ * starter — 叠在 daylight（themeDefaultStyle）之上的布局主题
+ *
+ * 配色 / 字体 / 组件变量一律复用 daylight，本文件只改分区布局。
+ * 思源加载顺序：daylight/theme.css → 本文件（themeStyle）
+ *
+ * 分区模型：
+ *   ┌──────────────── 1 顶栏 ────────────────┐
+ *   ├──────────┬───────────────┬─────────────┤
+ *   │ 2 左侧栏 │  3 中间编辑区  │  4 右侧栏   │
+ *   └──────────┴───────────────┴─────────────┘
+ *
+ * 开发：改完后 Network 勾 Disable cache，控制台 location.reload()
+ */
+
+:root {
+    /* 唯一自有令牌：隐藏顶栏时顶栏占位（官方 42px，压矮 4px） */
+    --starter-topbar-height: 38px;
+
+    /* 取消圆角卡片托盘：间隙归零；底色跟 daylight 面板白；关掉左上角高光 */
+    --b3-layout-space: 0px;
+    --b3-layout-space-margin: 0px;
+    --b3-body-background: var(--b3-theme-background);
+    --b3-body-background-hl-opacity: 0;
+}
+
+/* 取消官方 body 径向渐变，底色用 daylight 的 --b3-theme-background */
+body {
+    background-color: var(--b3-theme-background);
+    background-image: none;
+}
+
+/* =========================================================
+ * ① 顶栏
+ * 隐藏顶栏时勿给 #toolbar 设 z-index，否则挡住文档 Tab。
+ * 横线全宽；竖线从横线起向下（不贯穿 Tab 区）。
+ * ========================================================= */
+
+body.body--toolbar-hide #toolbar.toolbar {
+    height: var(--starter-topbar-height);
+    line-height: var(--starter-topbar-height);
+    position: absolute;
+    z-index: auto;
+    border-bottom: none;
+}
+
+body.body--toolbar-hide #toolbar {
+    pointer-events: none;
+}
+
+body.body--toolbar-hide #toolbar > :not(#drag) {
+    pointer-events: auto;
+}
+
+body.body--toolbar-hide #toolbar #drag {
+    height: var(--starter-topbar-height);
+    pointer-events: none;
+}
+
+body.body--toolbar-hide #toolbar #drag::before,
+body.body--toolbar-hide #toolbar #drag::after {
+    height: var(--starter-topbar-height);
+    pointer-events: auto;
+}
+
+body.body--toolbar-hide #toolbar .toolbar__item--win,
+body.body--toolbar-hide #toolbar .toolbar__item--close {
+    height: var(--starter-topbar-height);
+    padding-top: 11.25px;
+    padding-bottom: 11.25px;
+}
+
+body.body--toolbar-hide .layout-tab-bar .item {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+#layouts .layout-tab-bar {
+    border-bottom-color: transparent;
+}
+
+#layouts [data-type="wnd"] > .layout-tab-container {
+    border-top: none;
+}
+
+/* 全宽横线：颜色复用 daylight --b3-border-color */
+body.body--toolbar-hide::after {
+    content: "";
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: calc(var(--starter-topbar-height) - 1px);
+    height: 1px;
+    background-color: var(--b3-border-color);
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* =========================================================
+ * ② / ④ 与顶栏对齐
+ * ========================================================= */
+
+body.body--toolbar-hide #dockLeft,
+body.body--toolbar-hide #dockRight {
+    height: calc(100% - var(--starter-topbar-height));
+    margin-top: var(--starter-topbar-height);
+}
+
+body.body--toolbar-hide .layout__dockl:not(.layout--float),
+body.body--toolbar-hide .layout__dockr:not(.layout--float) {
+    margin-top: var(--starter-topbar-height);
+}
+
+/* =========================================================
+ * ②③④：直角贴合（圆角/阴影只动布局面板，不动 daylight 全局圆角变量）
+ * ========================================================= */
+
+.layout__center,
+.layout__dockl,
+.layout__dockr,
+.layout__dockb {
+    border-radius: 0;
+}
+
+body.body--toolbar-hide .layout__wnd--left .layout-tab-container,
+body.body--toolbar-hide .layout__wnd--right .layout-tab-container {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.layout--float.layout__dockl,
+.layout--float.layout__dockr,
+.layout--float.layout__dockb {
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/*
+ * 分区竖/横线：恢复被官方 content:none + layout-space:0 吃掉的线。
+ * 颜色一律 var(--b3-border-color)（daylight）。
+ */
+.layout__dockl + .layout__resize,
+.layout__center + .layout__resize {
+    width: 1px;
+    margin: 0;
+}
+
+.layout:not(.layout__center) > .layout__resize {
+    height: 1px;
+    margin: 0;
+}
+
+.layout__dockl + .layout__resize::after,
+.layout__center + .layout__resize::after,
+.layout:not(.layout__center) > .layout__resize::after {
+    content: "";
+    background-color: var(--b3-border-color);
+}
+
+.layout__resize--lr::after {
+    width: 1px;
+    left: 0;
+    top: 0;
+    height: 100%;
+    background-color: var(--b3-border-color);
+}
+
+body.body--toolbar-hide .layout__dockl + .layout__resize::after,
+body.body--toolbar-hide .layout__center + .layout__resize::after {
+    top: var(--starter-topbar-height);
+    height: calc(100% - var(--starter-topbar-height));
+}
+
+.layout__resize:not(.layout__resize--lr)::after {
+    height: 1px;
+    top: 0;
+    background-color: var(--b3-border-color);
+}
+
+/* =========================================================
+ * 显示顶栏：仅压矮 #toolbar，底线颜色仍用 daylight 边框色
+ * ========================================================= */
+
+body:not(.body--toolbar-hide) #toolbar.toolbar {
+    height: 28px;
+    line-height: 28px;
+    position: relative;
+    z-index: 5;
+    border-bottom: none;
+}
+
+body:not(.body--toolbar-hide) #toolbar.toolbar::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background-color: var(--b3-border-color);
+    z-index: 20;
+    pointer-events: none;
+}
+
+body:not(.body--toolbar-hide) #toolbar .toolbar__item--win,
+body:not(.body--toolbar-hide) #toolbar .toolbar__item--close {
+    height: 27px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}

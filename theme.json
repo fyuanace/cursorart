@@ -1,0 +1,38 @@
+{
+  "name": "starter",
+  "author": "fyuan",
+  "url": "",
+  "version": "0.1.0",
+  "minAppVersion": "3.1.0",
+  "displayName": {
+    "default": "Starter",
+    "zh_CN": "入门主题模板",
+    "zh-CN": "入门主题模板"
+  },
+  "description": {
+    "default": "Layout overlay on daylight: flat regions, reuse daylight colors.",
+    "zh_CN": "叠在 daylight 上的四分区布局主题，配色复用官方亮色。",
+    "zh-CN": "叠在 daylight 上的四分区布局主题，配色复用官方亮色。"
+  },
+  "readme": {
+    "default": "README.md",
+    "zh_CN": "README_zh_CN.md",
+    "zh-CN": "README_zh_CN.md"
+  },
+  "funding": {
+    "openCollective": "",
+    "patreon": "",
+    "github": "",
+    "custom": []
+  },
+  "modes": [
+    "light"
+  ],
+  "keywords": [
+    "starter",
+    "template",
+    "daylight",
+    "模板",
+    "入门"
+  ]
+}

@@ -139,7 +139,6 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     box-sizing: border-box;
     overflow: hidden;
     border: none;
-    border-bottom: 1px solid var(--b3-border-color);
     background-color: var(--b3-theme-background);
 }
 

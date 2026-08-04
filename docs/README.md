@@ -21,7 +21,8 @@
 ## 整体架构
 
 - 默认层：`appearance/themes/daylight/theme.css`（思源自动加载）
-- 覆盖层：`theme.css` + `theme.js`（侧栏顶横条 dock；顶栏左右侧栏显隐按钮）
+- 覆盖层：`theme.css` + `theme.js`（侧栏顶横条 dock；顶栏左右侧栏显隐；主题设置隐藏 dock 工具）
 - 分区线颜色：`var(--b3-border-color)`（daylight）
 - 面板底色：`var(--b3-theme-background)`（daylight）
 - 自有令牌：仅 `--starter-topbar-height`
+- 设置入口：顶栏 `#barPlugins` 菜单 →「Starter 设置」（见 [design/2026-08-04-theme-settings.md](design/2026-08-04-theme-settings.md)）

@@ -1,16 +1,17 @@
 /**
  * starter —
  * 1) 左/右 dock 图标挂到对应侧栏顶部横条
- * 2) 顶栏（导航与文档 Tab 之间）增加左右侧栏显隐按钮
- *
- * 显隐语义（模拟点 dock 图标）：
- * - 折叠：点「当前选中」的 dock 项（与再点一次标签/文档树相同）
- * - 展开：点「上一次选中」的 dock 项（记住隐藏前的面板，勿回落成 file）
+ * 2) 顶栏左右侧栏显隐按钮
+ * 3) 主题设置（入口同插件：#barPlugins 菜单 → Starter 设置）
  */
 (function () {
     const TOP_CLASS = "starter-dock--sidebar-top";
     const PANEL_CLASS = "starter-dock-panel--with-top";
     const TOGGLE_WRAP_ID = "starterSideToggles";
+    const STORAGE_KEY = "starter-theme-config";
+    const HIDE_STYLE_ID = "starterHideDockStyle";
+    const DIALOG_ID = "starterSettingsDialog";
+    const MENU_ITEM_ID = "starter-theme-settings";
 
     const sides = [
         {
@@ -29,13 +30,40 @@
         },
     ];
 
+    /** @type {{ hiddenDockTypes: string[] }} */
+    let config = loadConfig();
+
     /** 每侧记住上一次选中的 dock type（展开时用） */
     const lastType = {
         leftDock: "file",
         rightDock: "outline",
     };
 
+    function loadConfig() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) {
+                return {hiddenDockTypes: []};
+            }
+            const parsed = JSON.parse(raw);
+            return {
+                hiddenDockTypes: Array.isArray(parsed.hiddenDockTypes)
+                    ? parsed.hiddenDockTypes.filter((t) => typeof t === "string")
+                    : [],
+            };
+        } catch (e) {
+            return {hiddenDockTypes: []};
+        }
+    }
+
+    function saveConfig(next) {
+        config = next;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    }
+
     const getDock = (layoutKey) => window.siyuan?.layout?.[layoutKey];
+
+    const isHiddenType = (type) => config.hiddenDockTypes.includes(type);
 
     const isPanelOpen = (dock) => {
         if (!dock?.layout?.element) {
@@ -62,21 +90,16 @@
     };
 
     const pickOpenType = (dock, layoutKey, fallbackType) => {
-        const prefer = lastType[layoutKey];
-        if (prefer && dock.data?.[prefer]) {
-            return prefer;
+        const candidates = [lastType[layoutKey], fallbackType, ...Object.keys(dock.data || {})];
+        for (const type of candidates) {
+            if (type && dock.data?.[type] && !isHiddenType(type)) {
+                return type;
+            }
         }
-        if (dock.data?.[fallbackType]) {
-            return fallbackType;
-        }
-        const keys = Object.keys(dock.data || {});
-        return keys[0] || "";
+        return "";
     };
 
-    /**
-     * 与官方 dock 图标点击相同：toggleModel(type, false, true)
-     * （app/src/boot/globalEvent/click.ts）
-     */
+    /** 与官方 dock 图标点击相同：toggleModel(type, false, true) */
     const clickDockType = (dock, type) => {
         if (!type || typeof dock.toggleModel !== "function") {
             return;
@@ -126,6 +149,195 @@
         }
     };
 
+    /** 若正在显示将被隐藏的面板，先收起 */
+    const closeIfActiveHidden = (hiddenTypes) => {
+        const set = new Set(hiddenTypes);
+        for (const side of sides) {
+            const dock = getDock(side.layoutKey);
+            if (!dock || !isPanelOpen(dock)) {
+                continue;
+            }
+            const active = getActiveType(dock);
+            if (active && set.has(active)) {
+                lastType[side.layoutKey] = active;
+                clickDockType(dock, active);
+            }
+        }
+    };
+
+    const applyHiddenDockTypes = () => {
+        let style = document.getElementById(HIDE_STYLE_ID);
+        if (!style) {
+            style = document.createElement("style");
+            style.id = HIDE_STYLE_ID;
+            document.head.appendChild(style);
+        }
+        const rules = config.hiddenDockTypes
+            .map((type) => {
+                const safe = type.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+                return `.dock__item[data-type="${safe}"]{display:none!important}`;
+            })
+            .join("");
+        style.textContent = rules;
+    };
+
+    const listDockTools = () => {
+        const map = new Map();
+        document.querySelectorAll(".dock__item[data-type]").forEach((el) => {
+            if (el.classList.contains("dock__item--pin")) {
+                return;
+            }
+            const type = el.getAttribute("data-type");
+            if (!type || map.has(type)) {
+                return;
+            }
+            let label = el.getAttribute("data-title") || el.getAttribute("aria-label") || type;
+            label = String(label).split("\n")[0].trim();
+            // 去掉快捷键后缀「 ⇧⌘A」之类
+            label = label.replace(/\s+[⇧⌃⌥⌘↑↓←→\dA-Za-z+\-]+$/u, "").trim() || type;
+            map.set(type, {type, label});
+        });
+        return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, "zh"));
+    };
+
+    const closeSettingsDialog = () => {
+        document.getElementById(DIALOG_ID)?.remove();
+    };
+
+    const openSettingsDialog = () => {
+        closeSettingsDialog();
+        const tools = listDockTools();
+        const cancelText = window.siyuan?.languages?.cancel || "取消";
+        const saveText = window.siyuan?.languages?.save || "保存";
+
+        const rows = tools.length
+            ? tools
+                  .map(({type, label}) => {
+                      // 开关打开 = 显示（当前可见则为开）
+                      const checked = isHiddenType(type) ? "" : " checked";
+                      return `<label class="fn__flex b3-label config-item">
+  <div class="fn__flex-1">
+    ${label}
+    <div class="b3-label__text">data-type: ${type}</div>
+  </div>
+  <input class="b3-switch fn__flex-center" type="checkbox" data-starter-hide-type="${type}"${checked}>
+</label>`;
+                  })
+                  .join("")
+            : `<div class="b3-label">未检测到侧栏工具图标，请稍后再试。</div>`;
+
+        const dialog = document.createElement("div");
+        dialog.id = DIALOG_ID;
+        dialog.className = "b3-dialog b3-dialog--open";
+        dialog.innerHTML = `
+<div class="b3-dialog__scrim" data-starter-dlg="scrim"></div>
+<div class="b3-dialog__container" style="width:min(520px,92vw);max-height:80vh">
+  <div class="b3-dialog__header">Starter 设置</div>
+  <div class="b3-dialog__body">
+    <div class="b3-dialog__content" style="overflow:auto;max-height:calc(80vh - 100px)">
+      <div class="b3-label" style="border-bottom:none;padding-bottom:0">
+        侧栏工具显示
+        <div class="b3-label__text">开关打开 = 显示该工具图标；关闭 = 隐藏（仅本主题生效）</div>
+      </div>
+      ${rows}
+    </div>
+    <div class="b3-dialog__action">
+      <button class="b3-button b3-button--cancel" data-starter-dlg="cancel">${cancelText}</button>
+      <div class="fn__space"></div>
+      <button class="b3-button b3-button--text" data-starter-dlg="save">${saveText}</button>
+    </div>
+  </div>
+</div>`;
+
+        const onClose = () => {
+            dialog.removeEventListener("click", onClick);
+            document.removeEventListener("keydown", onKey, true);
+            closeSettingsDialog();
+        };
+        const onClick = (e) => {
+            const t = e.target?.closest?.("[data-starter-dlg]");
+            if (!t) {
+                return;
+            }
+            const act = t.getAttribute("data-starter-dlg");
+            if (act === "scrim" || act === "cancel") {
+                onClose();
+                return;
+            }
+            if (act === "save") {
+                const hidden = [];
+                dialog.querySelectorAll("[data-starter-hide-type]").forEach((input) => {
+                    if (!input.checked) {
+                        hidden.push(input.getAttribute("data-starter-hide-type"));
+                    }
+                });
+                closeIfActiveHidden(hidden);
+                saveConfig({hiddenDockTypes: hidden});
+                applyHiddenDockTypes();
+                onClose();
+            }
+        };
+        const onKey = (e) => {
+            if (e.key === "Escape") {
+                e.stopPropagation();
+                onClose();
+            }
+        };
+        dialog.addEventListener("click", onClick);
+        document.addEventListener("keydown", onKey, true);
+        document.body.appendChild(dialog);
+    };
+
+    const injectPluginsMenuItem = () => {
+        const menu = window.siyuan?.menus?.menu;
+        if (!menu || typeof menu.addItem !== "function") {
+            return;
+        }
+        const el = menu.element;
+        if (!el || el.classList.contains("fn__none")) {
+            return;
+        }
+        if (el.querySelector(`[data-id="${MENU_ITEM_ID}"]`)) {
+            return;
+        }
+        if (typeof menu.addSeparator === "function") {
+            menu.addSeparator({id: "starter-theme-settings-sep"});
+        }
+        menu.addItem({
+            id: MENU_ITEM_ID,
+            icon: "iconSettings",
+            label: "Starter 设置",
+            click() {
+                openSettingsDialog();
+            },
+        });
+    };
+
+    const onBarPluginsClick = () => {
+        // 等官方插件菜单建完再插入（与插件「配置」同级入口）
+        requestAnimationFrame(() => {
+            setTimeout(injectPluginsMenuItem, 0);
+        });
+    };
+
+    const bindPluginsMenu = () => {
+        const bar = document.getElementById("barPlugins");
+        if (!bar || bar.dataset.starterSettingsBound === "1") {
+            return !!bar;
+        }
+        bar.dataset.starterSettingsBound = "1";
+        bar.addEventListener("click", onBarPluginsClick);
+        return true;
+    };
+
+    const unbindPluginsMenu = () => {
+        const bar = document.getElementById("barPlugins");
+        if (bar) {
+            bar.removeEventListener("click", onBarPluginsClick);
+            delete bar.dataset.starterSettingsBound;
+        }
+    };
+
     const unmountToggles = () => {
         document.getElementById(TOGGLE_WRAP_ID)?.remove();
     };
@@ -143,7 +355,6 @@
             return false;
         }
 
-        // 初始化：若侧栏已打开，记下当前选中项
         sides.forEach((side) => {
             const dock = getDock(side.layoutKey);
             const active = dock && getActiveType(dock);
@@ -244,15 +455,19 @@
     const mountAllDocks = () => sides.every((side) => mountOne(side));
 
     const tryMount = () => {
+        applyHiddenDockTypes();
         const okDocks = mountAllDocks();
         const okToggles = mountToggles();
-        if (okDocks && okToggles) {
+        const okMenu = bindPluginsMenu();
+        if (okDocks && okToggles && okMenu) {
             return;
         }
         const obs = new MutationObserver(() => {
+            applyHiddenDockTypes();
             const d = mountAllDocks();
             const t = mountToggles();
-            if (d && t) {
+            const m = bindPluginsMenu();
+            if (d && t && m) {
                 obs.disconnect();
             }
         });
@@ -260,11 +475,13 @@
         setTimeout(() => obs.disconnect(), 15000);
     };
 
-    // 用户点 dock 图标时记住 type，供之后「展开」还原
     document.addEventListener("click", rememberDockClick, true);
 
     window.destroyTheme = async () => {
         document.removeEventListener("click", rememberDockClick, true);
+        unbindPluginsMenu();
+        closeSettingsDialog();
+        document.getElementById(HIDE_STYLE_ID)?.remove();
         unmountToggles();
         sides.forEach(unmountOne);
     };

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * cursor极简 — 叠在官方默认主题之上的布局主题
  *
  * 亮色：daylight → 本文件；暗色：midnight → 本文件
@@ -27,8 +27,8 @@
 
 /* 亮色 / 暗色底：统一面板与窗体背景 */
 :root[data-theme-mode="light"] {
-    --b3-theme-background: #fafafd;
-    --b3-body-background: #fafafd;
+    --b3-theme-background: #f8f8f8;
+    --b3-body-background: #f8f8f8;
 }
 
 :root[data-theme-mode="dark"] {
@@ -225,6 +225,12 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
 .layout__dockr,
 .layout__dockb {
     border-radius: 0;
+}
+
+/* 亮色：仅正文编辑区 + 面包屑栏纯白（不含顶栏 Tab / 左右侧栏，侧栏与标题栏为 #f8f8f8） */
+:root[data-theme-mode="light"] .layout__center .protyle,
+:root[data-theme-mode="light"] .layout__center .protyle-breadcrumb {
+    background-color: #ffffff;
 }
 
 body.body--toolbar-hide .layout__wnd--left .layout-tab-container,

@@ -21,6 +21,7 @@ tags: [settings, dock, theme.js]
 | 2026-08-04 | 开关语义改为：打开=显示，关闭=隐藏（与当前可见状态一致） |
 | 2026-08-04 | 已选中 dock 图标再点：document 冒泡阶段 stopPropagation，不收起侧栏；折叠仅由顶栏两按钮经 toggleModel 完成 |
 | 2026-08-04 | 配置改为 `/api/file` 写入 `/data/storage/theme/starter/config.json`；启动时读文件，并迁移旧 localStorage |
+| 2026-08-04 | 配置路径改为 `/data/storage/theme/cursorart/config.json`；启动时若仅有旧 `starter` 路径则迁入新路径 |
 
 ## 背景信息
 
@@ -40,9 +41,9 @@ tags: [settings, dock, theme.js]
 
 **生效与持久化**
 
-- 文件：`/data/storage/theme/starter/config.json`（工作区，经 `/api/file/getFile` / `putFile`）
+- 文件：`/data/storage/theme/cursorart/config.json`（工作区，经 `/api/file/getFile` / `putFile`）
 - 内容：`{ hiddenDockTypes: string[] }`
-- 若仅有旧版 `localStorage["starter-theme-config"]`，首次加载会迁入文件并清除 localStorage
+- 迁移顺序：新路径 → 旧路径 `/data/storage/theme/starter/config.json` → 旧版 `localStorage["starter-theme-config"]`；后两者读到后写入新路径并尽量清 localStorage
 - `#starterHideDockStyle` 注入 `.dock__item[data-type="…"]{display:none!important}`
 - 保存时若正在显示将被隐藏的面板，先按官方语义收起该面板
 - 侧栏折叠/展开选类型时跳过已隐藏项
@@ -60,7 +61,7 @@ tags: [settings, dock, theme.js]
 ## 其他模块引用约束
 
 - 隐藏只动图标显示，不删 DOM、不改思源 layout 数据
-- 配置落在 `/data/storage/theme/starter/`，不要写进 `petal` 插件目录，也不要只依赖 localStorage
+- 配置落在 `/data/storage/theme/cursorart/`，不要写进 `petal` 插件目录，也不要只依赖 localStorage
 
 ## 工程师测试验收方法
 
@@ -71,7 +72,8 @@ tags: [settings, dock, theme.js]
 5. 切换主题离开 starter → 隐藏样式与菜单挂钩应被 `destroyTheme` 清掉
 6. 再点已选中的侧栏工具图标，侧栏不应收起；仅顶栏左右面板按钮可折叠
 
-7. 保存后重启思源，隐藏配置应仍在（检查工作区 `data/storage/theme/starter/config.json`）
+7. 保存后重启思源，隐藏配置应仍在（检查工作区 `data/storage/theme/cursorart/config.json`）
+8. 若工作区仅有旧 `data/storage/theme/starter/config.json`，首次加载后应出现新路径文件且设置仍生效
 
 ## 其他说明
 

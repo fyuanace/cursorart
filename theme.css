@@ -15,8 +15,8 @@
  */
 
 :root {
-    /* 唯一自有令牌：隐藏顶栏时顶栏占位（官方 42px，压矮 4px） */
-    --starter-topbar-height: 38px;
+    /* 唯一自有令牌：隐藏顶栏时顶栏占位（与官方 Tab 行同为 42px） */
+    --starter-topbar-height: 42px;
 
     /* 取消圆角卡片托盘：间隙归零；底色跟面板；关掉左上角高光 */
     --b3-layout-space: 0px;
@@ -78,13 +78,22 @@ body.body--toolbar-hide #toolbar #drag::after {
 body.body--toolbar-hide #toolbar .toolbar__item--win,
 body.body--toolbar-hide #toolbar .toolbar__item--close {
     height: var(--starter-topbar-height);
-    padding-top: 11.25px;
-    padding-bottom: 11.25px;
+    padding-top: 13px;
+    padding-bottom: 13px;
 }
 
 body.body--toolbar-hide .layout-tab-bar .item {
     margin-top: 4px;
     margin-bottom: 4px;
+}
+
+/* 悬浮文档 Tab 与文件树 item 同色；排除只读条（+ / 空白 / 下拉）整条铺色 */
+#layouts .layout-tab-bar .item:hover:not(.item--focus):not(.item--readonly) {
+    background-color: var(--b3-list-hover);
+}
+
+#layouts .layout-tab-bar--readonly .item--readonly:hover {
+    background-color: transparent;
 }
 
 #layouts .layout-tab-bar {

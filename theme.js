@@ -11,7 +11,9 @@
     const TOGGLE_LEFT_ID = "starterToggleLeft";
     const TOGGLE_RIGHT_ID = "starterToggleRight";
     /** 工作区持久化（重启不丢）；勿用 petal 插件目录 */
-    const CONFIG_PATH = "/data/storage/theme/starter/config.json";
+    const CONFIG_PATH = "/data/storage/theme/cursorart/config.json";
+    /** 旧版路径（文件夹改名前）；读到后迁入 CONFIG_PATH */
+    const LEGACY_CONFIG_PATH = "/data/storage/theme/starter/config.json";
     const LEGACY_STORAGE_KEY = "starter-theme-config";
     const HIDE_STYLE_ID = "starterHideDockStyle";
     const DIALOG_ID = "starterSettingsDialog";
@@ -61,12 +63,12 @@
         }
     };
 
-    const loadConfigFromFile = async () => {
+    const loadConfigFromFile = async (path = CONFIG_PATH) => {
         try {
             const res = await fetch("/api/file/getFile", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({path: CONFIG_PATH}),
+                body: JSON.stringify({path}),
             });
             const text = await res.text();
             if (!text) {
@@ -111,9 +113,15 @@
     };
 
     const initConfig = async () => {
-        const fromFile = await loadConfigFromFile();
+        const fromFile = await loadConfigFromFile(CONFIG_PATH);
         if (fromFile) {
             config = fromFile;
+            return;
+        }
+        const fromLegacyFile = await loadConfigFromFile(LEGACY_CONFIG_PATH);
+        if (fromLegacyFile) {
+            config = fromLegacyFile;
+            await saveConfigToFile(fromLegacyFile);
             return;
         }
         const legacy = readLegacyLocal();

@@ -26,4 +26,5 @@
 - 面板底色：`var(--b3-theme-background)`
 - 自有令牌：仅 `--starter-topbar-height`
 - 设置入口：顶栏 `#barPlugins` 菜单 →「cursor极简 设置」（见 [design/2026-08-04-theme-settings.md](design/2026-08-04-theme-settings.md)）
-- 文件夹内部名仍为 `starter`（与 `theme.json` 的 `name` 一致）；界面显示名为 cursor极简
+- 文件夹名为 `cursorart`；界面显示名为 cursor极简（`theme.json` 的 `displayName`）
+- 配置文件：工作区 `data/storage/theme/cursorart/config.json`

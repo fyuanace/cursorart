@@ -26,6 +26,6 @@
 - 面板底色：`var(--b3-theme-background)`
 - 自有令牌：仅 `--starter-topbar-height`
 - 设置入口：顶栏 `#barPlugins` 菜单 →「cursor极简 设置」（见 [design/2026-08-04-theme-settings.md](design/2026-08-04-theme-settings.md)）
-- 文件夹名为 `cursorart`；界面显示名为 cursor极简（`theme.json` 的 `displayName`）
+- 文件夹名为 `cursorart`；`theme.json` 的 `name` 必须与文件夹名一致（思源 3.8+ 集市校验）；界面显示名为 cursor极简（`displayName`）
 - 安装目录：工作区 `conf/appearance/themes/cursorart/`（思源当前只从此目录加载主题；**不会**从 `data/themes` 加载）
 - 配置文件：工作区 `data/storage/theme/cursorart/config.json`（配置在 `data/` 下，可随工作区同步；主题 CSS/JS 本身不随云端同步）

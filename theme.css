@@ -236,10 +236,35 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     border-radius: 0;
 }
 
-/* 亮色：仅正文编辑区 + 面包屑栏纯白（不含顶栏 Tab / 左右侧栏，侧栏与标题栏为 #f8f8f8） */
+/* 正文 + 面包屑 + 右侧栏同色；左侧栏与顶栏仍用 chrome 底 */
 :root[data-theme-mode="light"] .layout__center .protyle,
 :root[data-theme-mode="light"] .layout__center .protyle-breadcrumb {
     background-color: #ffffff;
+}
+
+:root[data-theme-mode="light"] .layout__dockr {
+    --b3-theme-background: #ffffff;
+    background-color: #ffffff;
+}
+
+:root[data-theme-mode="light"] .layout__dockr .sy__outline,
+:root[data-theme-mode="light"] .layout__dockr .sy__outline .block__icons {
+    background-color: #ffffff;
+}
+
+:root[data-theme-mode="dark"] .layout__center .protyle,
+:root[data-theme-mode="dark"] .layout__center .protyle-breadcrumb {
+    background-color: #1e1e1e;
+}
+
+:root[data-theme-mode="dark"] .layout__dockr {
+    --b3-theme-background: #1e1e1e;
+    background-color: #1e1e1e;
+}
+
+:root[data-theme-mode="dark"] .layout__dockr .sy__outline,
+:root[data-theme-mode="dark"] .layout__dockr .sy__outline .block__icons {
+    background-color: #1e1e1e;
 }
 
 body.body--toolbar-hide .layout__wnd--left .layout-tab-container,

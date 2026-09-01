@@ -4,6 +4,7 @@
  * 2) 顶栏左右侧栏显隐：左在「思源」标题后，右在窗口最小化左侧
  * 3) 主题设置（入口同插件：#barPlugins 菜单 → cursor极简 设置）
  * 4) 已选中 dock 图标再点不收起侧栏（仅拦 UI click，不改 toggleModel）
+ * 5) 正文滚动/光标位置同步右侧大纲当前项（复用官方 Outline.setCurrent）
  */
 (function () {
     const TOP_CLASS = "starter-dock--sidebar-top";
@@ -559,9 +560,219 @@
 
     const mountAllDocks = () => sides.every((side) => mountOne(side));
 
+    /** 大纲跟随：视口顶部附近的标题 → 官方 Outline.setCurrent */
+    const OUTLINE_FOLLOW_PROBE = 48;
+    let outlineFollowRaf = 0;
+    let outlineFollowPending = null;
+
+    const isOutlineModel = (model) =>
+        !!(model && typeof model.setCurrent === "function" && typeof model.setCurrentByPreview === "function");
+
+    const isUsableHeading = (el) => {
+        if (!el || el.getAttribute("data-type") !== "NodeHeading") {
+            return false;
+        }
+        if (el.closest(".bq, .callout-content, [data-type='NodeBlockQueryEmbed']")) {
+            return false;
+        }
+        return true;
+    };
+
+    const collectOutlineModels = () => {
+        const list = [];
+        const seen = new Set();
+        const push = (model) => {
+            if (!isOutlineModel(model) || seen.has(model)) {
+                return;
+            }
+            seen.add(model);
+            list.push(model);
+        };
+        for (const key of ["leftDock", "rightDock", "bottomDock"]) {
+            push(window.siyuan?.layout?.[key]?.data?.outline);
+        }
+        const walk = (node) => {
+            if (!node) {
+                return;
+            }
+            if (node.model) {
+                push(node.model);
+            }
+            const children = node.children;
+            if (Array.isArray(children)) {
+                children.forEach(walk);
+            }
+        };
+        walk(window.siyuan?.layout?.layout);
+        return list;
+    };
+
+    const getProtyleRootId = (protyleEl) =>
+        protyleEl?.querySelector?.(".protyle-title")?.getAttribute("data-node-id") || "";
+
+    const headingBeforeOrSelf = (block) => {
+        if (!block) {
+            return null;
+        }
+        if (isUsableHeading(block)) {
+            return block;
+        }
+        const wysiwyg = block.closest(".protyle-wysiwyg");
+        if (!wysiwyg) {
+            return null;
+        }
+        const headings = wysiwyg.querySelectorAll('[data-type="NodeHeading"]');
+        let best = null;
+        for (const h of headings) {
+            if (!isUsableHeading(h)) {
+                continue;
+            }
+            if (h === block || (h.compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+                best = h;
+            }
+        }
+        return best;
+    };
+
+    const findViewportHeading = (protyleEl) => {
+        const content = protyleEl.querySelector(".protyle-content");
+        const wysiwyg = protyleEl.querySelector(".protyle-wysiwyg");
+        if (!content || !wysiwyg) {
+            return null;
+        }
+        const probeY = content.getBoundingClientRect().top + OUTLINE_FOLLOW_PROBE;
+        const headings = wysiwyg.querySelectorAll('[data-type="NodeHeading"]');
+        let best = null;
+        for (const h of headings) {
+            if (!isUsableHeading(h)) {
+                continue;
+            }
+            if (h.getBoundingClientRect().top <= probeY) {
+                best = h;
+            }
+        }
+        return best;
+    };
+
+    const getCaretHeading = (protyleEl) => {
+        const wysiwyg = protyleEl.querySelector(".protyle-wysiwyg");
+        const sel = window.getSelection();
+        if (!wysiwyg || !sel || sel.rangeCount === 0) {
+            return null;
+        }
+        const node = sel.getRangeAt(0).startContainer;
+        if (!wysiwyg.contains(node)) {
+            return null;
+        }
+        const el = node.nodeType === 1 ? node : node.parentElement;
+        const block = el?.closest?.("[data-node-id]");
+        return headingBeforeOrSelf(block);
+    };
+
+    const syncOutlineFromProtyle = (protyleEl, preferCaret) => {
+        if (!protyleEl || protyleEl.classList.contains("fn__none")) {
+            return;
+        }
+        const rootId = getProtyleRootId(protyleEl);
+        if (!rootId) {
+            return;
+        }
+        const heading = (preferCaret && getCaretHeading(protyleEl)) || findViewportHeading(protyleEl);
+        if (!heading) {
+            return;
+        }
+        const id = heading.getAttribute("data-node-id");
+        if (!id) {
+            return;
+        }
+        for (const outline of collectOutlineModels()) {
+            if (outline.blockId && outline.blockId !== rootId) {
+                continue;
+            }
+            const focused = outline.element?.querySelector?.(".b3-list-item--focus");
+            if (focused?.getAttribute("data-node-id") === id) {
+                continue;
+            }
+            outline.setCurrent(heading);
+        }
+    };
+
+    const scheduleOutlineFollow = (protyleEl, preferCaret) => {
+        outlineFollowPending = {protyleEl, preferCaret};
+        if (outlineFollowRaf) {
+            return;
+        }
+        outlineFollowRaf = requestAnimationFrame(() => {
+            outlineFollowRaf = 0;
+            const job = outlineFollowPending;
+            outlineFollowPending = null;
+            if (job) {
+                syncOutlineFromProtyle(job.protyleEl, job.preferCaret);
+            }
+        });
+    };
+
+    const onEditorScrollCapture = (e) => {
+        const t = e.target;
+        if (!(t instanceof Element) || !t.classList.contains("protyle-content")) {
+            return;
+        }
+        if (t.closest(".sy__outline")) {
+            return;
+        }
+        if (!t.closest("#layouts .layout__center")) {
+            return;
+        }
+        const protyleEl = t.closest(".protyle");
+        scheduleOutlineFollow(protyleEl, false);
+    };
+
+    const onSelectionOutlineFollow = () => {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) {
+            return;
+        }
+        const node = sel.getRangeAt(0).startContainer;
+        const el = node.nodeType === 1 ? node : node.parentElement;
+        const protyleEl = el?.closest?.("#layouts .layout__center .protyle");
+        if (!protyleEl) {
+            return;
+        }
+        scheduleOutlineFollow(protyleEl, true);
+    };
+
+    const onProtyleSwitchOutlineFollow = () => {
+        const el =
+            document.querySelector("#layouts .layout__center .layout__wnd--active .protyle:not(.fn__none)") ||
+            document.querySelector("#layouts .layout__center .protyle:not(.fn__none)");
+        if (el) {
+            scheduleOutlineFollow(el, true);
+        }
+    };
+
+    const startOutlineFollow = () => {
+        document.addEventListener("scroll", onEditorScrollCapture, {capture: true, passive: true});
+        document.addEventListener("selectionchange", onSelectionOutlineFollow);
+        document.addEventListener("loaded-protyle-static", onProtyleSwitchOutlineFollow);
+        document.addEventListener("switch-protyle", onProtyleSwitchOutlineFollow);
+    };
+
+    const stopOutlineFollow = () => {
+        document.removeEventListener("scroll", onEditorScrollCapture, true);
+        document.removeEventListener("selectionchange", onSelectionOutlineFollow);
+        document.removeEventListener("loaded-protyle-static", onProtyleSwitchOutlineFollow);
+        document.removeEventListener("switch-protyle", onProtyleSwitchOutlineFollow);
+        if (outlineFollowRaf) {
+            cancelAnimationFrame(outlineFollowRaf);
+            outlineFollowRaf = 0;
+        }
+        outlineFollowPending = null;
+    };
+
     const tryMount = async () => {
         await initConfig();
         applyHiddenDockTypes();
+        startOutlineFollow();
         const okDocks = mountAllDocks();
         const okToggles = mountToggles();
         const okMenu = bindPluginsMenu();
@@ -587,6 +798,7 @@
     window.destroyTheme = async () => {
         document.removeEventListener("click", rememberDockClick, true);
         document.removeEventListener("click", suppressActiveDockCollapse, false);
+        stopOutlineFollow();
         unbindPluginsMenu();
         closeSettingsDialog();
         document.getElementById(HIDE_STYLE_ID)?.remove();

@@ -25,6 +25,8 @@ tags: [layout, toolbar, regions, daylight]
 | 2026-08-05 | 排除 `.item--readonly`：+ / 中间空白 / 下拉整条不再铺悬浮底 |
 | 2026-08-05 | Tab 行高度恢复官方约 42px，不再压到 `--starter-topbar-height` |
 | 2026-08-05 | `--starter-topbar-height` 改为 42px，`#toolbar` / 横线 / 侧栏顶边与官方 Tab 行对齐 |
+| 2026-09-01 | 亮色右侧栏（`.layout__dockr`）底色改为与编辑区相同的 `#ffffff`；左侧栏与顶栏仍为 `#f8f8f8` |
+| 2026-09-01 | 暗色右侧栏与编辑区同为 midnight 纸色 `#1e1e1e`；左侧栏与顶栏仍为 `#191a1b` |
 
 ## 背景信息
 
@@ -39,7 +41,7 @@ tags: [layout, toolbar, regions, daylight]
 | ① | `#toolbar` | 高度 `--starter-topbar-height`（42px）；`body::after` 画全宽 1px 底线；勿抬 `z-index`（否则挡 Tab 点击） |
 | ② | `#dockLeft`、`.layout__dockl` | `margin-top` / 高度与 ① 对齐 |
 | ③ | 中栏 `.layout-tab-bar` + `.layout-tab-container` | Tab 行保持官方约 42px；悬浮未聚焦 Tab 用 `--b3-list-hover`（同文件树，排除只读条）；不再画顶边线；Tab 条 `border-bottom` 透明 |
-| ④ | `#dockRight`、`.layout__dockr` | 同 ② |
+| ④ | `#dockRight`、`.layout__dockr` | 同 ②；底色与编辑区一致（亮 `#ffffff` / 暗 `#1e1e1e`） |
 
 竖向：`.layout__resize--lr::after` 等，颜色 `var(--b3-border-color)`（daylight）。
 
@@ -87,6 +89,7 @@ tags: [layout, toolbar, regions, daylight]
 3. 顶栏下方应有一条贯穿左中右的 1px 横线；激活文档 Tab 不能盖住该线
 4. 文档 Tab 仍可点击切换、关闭；顶栏左右按钮仍可点；只读条中间空白无整条悬浮底
 5. 左栏 / 中栏 / 右栏之间竖线清晰；左栏、右栏顶边与顶栏底线对齐
+5a. 右侧大纲等面板底色应与中间编辑区一致：亮色均为 `#ffffff`，暗色均为 `#1e1e1e`；左侧文档树仍为 chrome（亮 `#f8f8f8` / 暗 `#191a1b`）
 6. 点顶栏左右面板图标：折叠收起当前面板；再点应恢复隐藏前选中的那一项（如标签不会变成文档树）；按钮本身无按下高亮
 7. 关闭「隐藏顶栏」后，横线仍在 `#toolbar` 底边，高度约 28px
 

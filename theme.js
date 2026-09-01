@@ -565,9 +565,12 @@
     const mountAllDocks = () => sides.every((side) => mountOne(side));
 
     /** 大纲跟随：视口顶部附近的标题 → 官方 Outline.setCurrent */
-    const OUTLINE_FOLLOW_PROBE = 48;
+    const OUTLINE_FOLLOW_TOP_SLOP = 8;
+    const OUTLINE_FOLLOW_NEAR_BAND = 140;
+    const OUTLINE_JUMP_IGNORE_MS = 500;
     let outlineFollowRaf = 0;
     let outlineFollowPending = null;
+    let outlineJumpUntil = 0;
 
     const isOutlineModel = (model) =>
         !!(model && typeof model.setCurrent === "function" && typeof model.setCurrentByPreview === "function");
@@ -644,18 +647,26 @@
         if (!content || !wysiwyg) {
             return null;
         }
-        const probeY = content.getBoundingClientRect().top + OUTLINE_FOLLOW_PROBE;
+        const contentTop = content.getBoundingClientRect().top;
+        const passedY = contentTop + OUTLINE_FOLLOW_TOP_SLOP;
+        const bandY = contentTop + OUTLINE_FOLLOW_NEAR_BAND;
         const headings = wysiwyg.querySelectorAll('[data-type="NodeHeading"]');
-        let best = null;
+        let lastPassed = null;
+        let firstInBand = null;
         for (const h of headings) {
             if (!isUsableHeading(h)) {
                 continue;
             }
-            if (h.getBoundingClientRect().top <= probeY) {
-                best = h;
+            const top = h.getBoundingClientRect().top;
+            if (top <= passedY) {
+                lastPassed = h;
+                continue;
+            }
+            if (!firstInBand && top <= bandY) {
+                firstInBand = h;
             }
         }
-        return best;
+        return firstInBand || lastPassed;
     };
 
     const getCaretHeading = (protyleEl) => {
@@ -716,6 +727,17 @@
         });
     };
 
+    const onOutlineJumpPointer = (e) => {
+        const t = e.target;
+        if (!(t instanceof Element)) {
+            return;
+        }
+        if (!t.closest(".sy__outline .b3-list-item[data-node-id]")) {
+            return;
+        }
+        outlineJumpUntil = Date.now() + OUTLINE_JUMP_IGNORE_MS;
+    };
+
     const onEditorScrollCapture = (e) => {
         const t = e.target;
         if (!(t instanceof Element) || !t.classList.contains("protyle-content")) {
@@ -725,6 +747,9 @@
             return;
         }
         if (!t.closest("#layouts .layout__center")) {
+            return;
+        }
+        if (Date.now() < outlineJumpUntil) {
             return;
         }
         const protyleEl = t.closest(".protyle");
@@ -755,6 +780,7 @@
     };
 
     const startOutlineFollow = () => {
+        document.addEventListener("pointerdown", onOutlineJumpPointer, true);
         document.addEventListener("scroll", onEditorScrollCapture, {capture: true, passive: true});
         document.addEventListener("selectionchange", onSelectionOutlineFollow);
         document.addEventListener("loaded-protyle-static", onProtyleSwitchOutlineFollow);
@@ -762,6 +788,7 @@
     };
 
     const stopOutlineFollow = () => {
+        document.removeEventListener("pointerdown", onOutlineJumpPointer, true);
         document.removeEventListener("scroll", onEditorScrollCapture, true);
         document.removeEventListener("selectionchange", onSelectionOutlineFollow);
         document.removeEventListener("loaded-protyle-static", onProtyleSwitchOutlineFollow);
@@ -771,6 +798,7 @@
             outlineFollowRaf = 0;
         }
         outlineFollowPending = null;
+        outlineJumpUntil = 0;
     };
 
     /** 面包屑：隐藏官方块级条，在旁边画文档路径（避免官方异步 render 盖掉） */

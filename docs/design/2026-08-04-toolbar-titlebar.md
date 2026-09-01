@@ -65,7 +65,7 @@ tags: [layout, toolbar, regions, daylight]
 
 - 目标：只量 Tab/工具这一行，截图为 **55 物理像素**（不含路径条）
 - `theme.js`：`--starter-topbar-height = 55 / devicePixelRatio`。150% DPI 时 CSS ≈ 36.67px，截图为 55
-- 路径条仍为 22px CSS，不计入这 50
+- 路径条跟官方面包屑行高，不锁 22px，不计入标题栏 55
 - 同一行分工：Tab 铺满该行；普通 `.toolbar__item` 保持官方高度并垂直居中；`.toolbar__item--win/--close` 铺满行高
 
 **顶栏侧栏开关（theme.js）**：

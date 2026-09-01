@@ -365,9 +365,11 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     border-radius: 0;
 }
 
-/* 中栏：藏起官方块级面包屑，文档路径条占用同一行且禁止换行 */
+/* 中栏：藏起官方块级面包屑，文档路径条与右侧按钮同一行、等高居中 */
 #layouts .layout__center .protyle-breadcrumb {
+    display: flex;
     flex-wrap: nowrap;
+    align-items: center;
     overflow: hidden;
 }
 
@@ -379,13 +381,14 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     display: flex;
     flex-wrap: nowrap !important;
     align-items: center;
+    align-self: stretch;
     flex: 1;
     min-width: 0;
-    height: 22px;
-    max-height: 22px;
+    height: auto;
+    max-height: none;
     overflow: hidden;
     white-space: nowrap;
-    font-size: 12px;
+    font-size: 14px;
     line-height: 22px;
     color: var(--b3-theme-on-surface);
 }
@@ -398,7 +401,7 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     white-space: nowrap;
     cursor: pointer;
     border-radius: var(--b3-border-radius-s);
-    padding: 1px 6px;
+    padding: 2px 6px;
     color: var(--b3-theme-on-background);
 }
 
@@ -451,6 +454,26 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
 :root[data-theme-mode="dark"] .layout__dockr .sy__outline,
 :root[data-theme-mode="dark"] .layout__dockr .sy__outline .block__icons {
     background-color: #1e1e1e;
+}
+
+/* 大纲：不显示文档名与 H1/H2 标记，一级标题加粗 */
+.sy__outline > .b3-list-item,
+.sy__outline .b3-list-item[data-type="NodeDocument"] {
+    display: none !important;
+}
+
+.sy__outline .b3-list-item .b3-list-item__graphic {
+    display: none !important;
+}
+
+.sy__outline .b3-list-item[data-subtype="h1"] .b3-list-item__text {
+    font-weight: 700;
+}
+
+/* 行内代码文字色（Notion #d6716a）；不含代码块 */
+.b3-typography :not(pre) > code,
+.protyle-wysiwyg [data-node-id] span[data-type~="code"] {
+    color: #d6716a;
 }
 
 body.body--toolbar-hide .layout__wnd--left .layout-tab-container,

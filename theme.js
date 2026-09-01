@@ -5,8 +5,12 @@
  * 3) 主题设置（入口同插件：#barPlugins 菜单 → cursor极简 设置）
  * 4) 已选中 dock 图标再点不收起侧栏（仅拦 UI click，不改 toggleModel）
  * 5) 正文滚动/光标位置同步右侧大纲当前项（复用官方 Outline.setCurrent）
+ * 6) 面包屑改为文档路径（笔记本/文件夹/文档），不再显示页内块层级
+ * 7) 标题栏截图高度 55 物理像素：CSS = 55 / devicePixelRatio
  */
 (function () {
+    /** 截图/屏幕上量到的标题栏高度（设备像素），不含路径条 */
+    const TOPBAR_SCREEN_PX = 55;
     const TOP_CLASS = "starter-dock--sidebar-top";
     const PANEL_CLASS = "starter-dock-panel--with-top";
     const TOGGLE_LEFT_ID = "starterToggleLeft";
@@ -769,10 +773,279 @@
         outlineFollowPending = null;
     };
 
+    /** 面包屑：隐藏官方块级条，在旁边画文档路径（避免官方异步 render 盖掉） */
+    const PATH_BAR_CLASS = "starter-doc-path";
+    const pathCrumbCache = new Map();
+    const pathCrumbInflight = new Map();
+    let pathBarHostObs = null;
+    let pathBarTitleObs = null;
+    let pathBarRaf = 0;
+
+    const postJson = async (url, body) => {
+        const res = await fetch(url, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body),
+        });
+        return res.json();
+    };
+
+    const escapeHtml = (s) =>
+        String(s)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+
+    const parsePathIds = (path) => {
+        const ids = [];
+        const re = /(\d{14}-[0-9a-z]+)/gi;
+        let m = re.exec(path);
+        while (m) {
+            ids.push(m[1]);
+            m = re.exec(path);
+        }
+        return ids;
+    };
+
+    const openDocById = (id) => {
+        if (!id) {
+            return;
+        }
+        if (typeof window.openFileByURL === "function") {
+            window.openFileByURL(`siyuan://blocks/${id}`);
+            return;
+        }
+        const treeItem = document.querySelector(`#layouts .sy__file .b3-list-item[data-node-id="${id}"]`);
+        if (treeItem) {
+            treeItem.click();
+            return;
+        }
+        const a = document.createElement("a");
+        a.href = `siyuan://blocks/${id}`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    };
+
+    const loadPathCrumbs = async (rootId) => {
+        if (!rootId) {
+            return null;
+        }
+        if (pathCrumbCache.has(rootId)) {
+            return pathCrumbCache.get(rootId);
+        }
+        if (pathCrumbInflight.has(rootId)) {
+            return pathCrumbInflight.get(rootId);
+        }
+        const job = (async () => {
+            const [fullRes, pathRes] = await Promise.all([
+                postJson("/api/filetree/getFullHPathByID", {id: rootId}),
+                postJson("/api/filetree/getPathByID", {id: rootId}),
+            ]);
+            if (fullRes?.code !== 0 || pathRes?.code !== 0) {
+                return null;
+            }
+            const names = String(fullRes.data || "")
+                .split("/")
+                .map((s) => s.trim())
+                .filter(Boolean);
+            const pathData = pathRes.data || {};
+            const ids = parsePathIds(pathData.path || "");
+            const box = pathData.notebook || "";
+            if (!names.length) {
+                return null;
+            }
+            const crumbs = names.map((name, index) => {
+                const last = index === names.length - 1;
+                const id = index === 0 ? box : ids[index - 1] || (last ? rootId : "");
+                return {name, box, id};
+            });
+            pathCrumbCache.set(rootId, crumbs);
+            return crumbs;
+        })();
+        pathCrumbInflight.set(rootId, job);
+        try {
+            return await job;
+        } finally {
+            pathCrumbInflight.delete(rootId);
+        }
+    };
+
+    const crumbsHtml = (crumbs, rootId) => {
+        const n = crumbs.length;
+        return crumbs
+            .map((c, index) => {
+                const last = index === n - 1;
+                const keep = n <= 3 || index === 0 || index >= n - 2;
+                const idAttr = c.id ? ` data-starter-doc-id="${c.id}"` : "";
+                const item = `<span class="starter-doc-path__item${keep ? " starter-doc-path__item--keep" : " starter-doc-path__item--mid"}" data-starter-path-item="1"${idAttr} data-starter-root="${rootId}" title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</span>`;
+                if (last) {
+                    return item;
+                }
+                return `${item}<span class="starter-doc-path__sep">/</span>`;
+            })
+            .join("");
+    };
+
+    const ensurePathBar = (host) => {
+        let bar = host.querySelector(`:scope > .${PATH_BAR_CLASS}`);
+        if (bar) {
+            return bar;
+        }
+        const official = host.querySelector(":scope > .protyle-breadcrumb__bar");
+        if (!official) {
+            return null;
+        }
+        bar = document.createElement("div");
+        bar.className = `protyle-breadcrumb__bar ${PATH_BAR_CLASS}`;
+        official.insertAdjacentElement("afterend", bar);
+        bar.addEventListener(
+            "wheel",
+            (event) => {
+                bar.scrollLeft += event.deltaY;
+            },
+            {passive: true}
+        );
+        return bar;
+    };
+
+    const bindPathTitle = (title) => {
+        if (!pathBarTitleObs || !title || title.dataset.starterPathBound === "1") {
+            return;
+        }
+        title.dataset.starterPathBound = "1";
+        pathBarTitleObs.observe(title, {attributes: true, attributeFilter: ["data-node-id"]});
+    };
+
+    const fillPathBar = async (bar, rootId) => {
+        if (!bar || !rootId) {
+            return;
+        }
+        const req = String((Number(bar.dataset.starterPathReq) || 0) + 1);
+        bar.dataset.starterPathReq = req;
+        const crumbs = await loadPathCrumbs(rootId);
+        if (bar.dataset.starterPathReq !== req || !crumbs || !bar.isConnected) {
+            return;
+        }
+        if (bar.dataset.starterPathRoot === rootId && bar.querySelector("[data-starter-path-item]")) {
+            return;
+        }
+        bar.innerHTML = crumbsHtml(crumbs, rootId);
+        bar.dataset.starterPathRoot = rootId;
+    };
+
+    const refreshAllPathBars = () => {
+        document.querySelectorAll("#layouts .layout__center .protyle-breadcrumb").forEach((host) => {
+            const protyleEl = host.closest(".protyle");
+            const title = protyleEl?.querySelector(".protyle-title");
+            bindPathTitle(title);
+            const rootId = title?.getAttribute("data-node-id") || "";
+            const bar = ensurePathBar(host);
+            if (bar && rootId) {
+                fillPathBar(bar, rootId);
+            }
+        });
+    };
+
+    const schedulePathBars = () => {
+        if (pathBarRaf) {
+            return;
+        }
+        pathBarRaf = requestAnimationFrame(() => {
+            pathBarRaf = 0;
+            refreshAllPathBars();
+        });
+    };
+
+    const onProtylePathBreadcrumb = () => {
+        schedulePathBars();
+    };
+
+    const onPathCrumbClick = (e) => {
+        const item = e.target?.closest?.("[data-starter-path-item]");
+        if (!item || !item.closest(`#layouts .layout__center .${PATH_BAR_CLASS}`)) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        const docId = item.getAttribute("data-starter-doc-id");
+        const rootId = item.getAttribute("data-starter-root");
+        if (docId && docId !== rootId) {
+            openDocById(docId);
+        }
+    };
+
+    const startPathBreadcrumb = () => {
+        pathBarTitleObs = new MutationObserver(schedulePathBars);
+        pathBarHostObs = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                for (const n of m.addedNodes) {
+                    if (n.nodeType !== 1) {
+                        continue;
+                    }
+                    if (n.classList?.contains("protyle-breadcrumb") || n.querySelector?.(".protyle-breadcrumb")) {
+                        schedulePathBars();
+                        return;
+                    }
+                }
+            }
+        });
+        const center = document.querySelector("#layouts .layout__center") || document.body;
+        pathBarHostObs.observe(center, {childList: true, subtree: true});
+        document.addEventListener("click", onPathCrumbClick, true);
+        document.addEventListener("loaded-protyle-static", onProtylePathBreadcrumb);
+        document.addEventListener("switch-protyle", onProtylePathBreadcrumb);
+        schedulePathBars();
+    };
+
+    const stopPathBreadcrumb = () => {
+        document.removeEventListener("click", onPathCrumbClick, true);
+        document.removeEventListener("loaded-protyle-static", onProtylePathBreadcrumb);
+        document.removeEventListener("switch-protyle", onProtylePathBreadcrumb);
+        pathBarHostObs?.disconnect();
+        pathBarTitleObs?.disconnect();
+        pathBarHostObs = null;
+        pathBarTitleObs = null;
+        if (pathBarRaf) {
+            cancelAnimationFrame(pathBarRaf);
+            pathBarRaf = 0;
+        }
+        document.querySelectorAll(`.${PATH_BAR_CLASS}`).forEach((el) => el.remove());
+        document.querySelectorAll(".protyle-title[data-starter-path-bound]").forEach((el) => {
+            delete el.dataset.starterPathBound;
+        });
+        pathCrumbCache.clear();
+        pathCrumbInflight.clear();
+    };
+
+    const applyTopbarHeight = () => {
+        const dpr = window.devicePixelRatio || 1;
+        const cssPx = TOPBAR_SCREEN_PX / dpr;
+        document.documentElement.style.setProperty(
+            "--starter-topbar-height",
+            `${Number(cssPx.toFixed(4))}px`
+        );
+    };
+
+    const startTopbarHeight = () => {
+        applyTopbarHeight();
+        window.addEventListener("resize", applyTopbarHeight);
+        window.visualViewport?.addEventListener("resize", applyTopbarHeight);
+    };
+
+    const stopTopbarHeight = () => {
+        window.removeEventListener("resize", applyTopbarHeight);
+        window.visualViewport?.removeEventListener("resize", applyTopbarHeight);
+        document.documentElement.style.removeProperty("--starter-topbar-height");
+    };
+
     const tryMount = async () => {
         await initConfig();
+        applyTopbarHeight();
         applyHiddenDockTypes();
         startOutlineFollow();
+        startPathBreadcrumb();
         const okDocks = mountAllDocks();
         const okToggles = mountToggles();
         const okMenu = bindPluginsMenu();
@@ -781,6 +1054,7 @@
         }
         const obs = new MutationObserver(() => {
             applyHiddenDockTypes();
+            schedulePathBars();
             const d = mountAllDocks();
             const t = mountToggles();
             const m = bindPluginsMenu();
@@ -794,11 +1068,14 @@
 
     document.addEventListener("click", rememberDockClick, true);
     document.addEventListener("click", suppressActiveDockCollapse, false);
+    startTopbarHeight();
 
     window.destroyTheme = async () => {
         document.removeEventListener("click", rememberDockClick, true);
         document.removeEventListener("click", suppressActiveDockCollapse, false);
+        stopTopbarHeight();
         stopOutlineFollow();
+        stopPathBreadcrumb();
         unbindPluginsMenu();
         closeSettingsDialog();
         document.getElementById(HIDE_STYLE_ID)?.remove();

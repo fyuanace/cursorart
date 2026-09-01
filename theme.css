@@ -15,8 +15,8 @@
  */
 
 :root {
-    /* 唯一自有令牌：隐藏顶栏时顶栏占位（与官方 Tab 行同为 42px） */
-    --starter-topbar-height: 42px;
+    /* 唯一自有令牌：标题栏行高。目标是截图像素 55；theme.js 按 devicePixelRatio 写入 CSS 值 */
+    --starter-topbar-height: 55px;
 
     /* 取消圆角卡片托盘：间隙归零；底色跟面板；关掉左上角高光 */
     --b3-layout-space: 0px;
@@ -49,11 +49,17 @@ body {
  * ========================================================= */
 
 body.body--toolbar-hide #toolbar.toolbar {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
     height: var(--starter-topbar-height);
+    min-height: var(--starter-topbar-height);
+    max-height: var(--starter-topbar-height);
     line-height: var(--starter-topbar-height);
     position: absolute;
     z-index: auto;
     border-bottom: none;
+    overflow: hidden;
 }
 
 body.body--toolbar-hide #toolbar {
@@ -75,21 +81,144 @@ body.body--toolbar-hide #toolbar #drag::after {
     pointer-events: auto;
 }
 
-body.body--toolbar-hide #toolbar .toolbar__item--win,
-body.body--toolbar-hide #toolbar .toolbar__item--close {
+/* 普通工具：保持官方小按钮，在标题栏行里垂直居中，不跟 Tab 抢满高 */
+body.body--toolbar-hide #toolbar > .toolbar__item:not(.toolbar__item--win):not(.toolbar__item--close) {
+    align-self: center;
+}
+
+/* 窗口最小/最大/关闭：铺满标题栏高度，用 flex 居中图标（避免固定 padding 在缩放后偏位） */
+body.body--toolbar-hide #toolbar #windowControls {
     height: var(--starter-topbar-height);
-    padding-top: 13px;
-    padding-bottom: 13px;
+    align-self: stretch;
+    display: flex;
+    align-items: stretch;
+}
+
+body.body--toolbar-hide .toolbar__item--win,
+body.body--toolbar-hide .toolbar__item--close,
+body.body--window .toolbar__window .toolbar__item {
+    box-sizing: border-box;
+    height: var(--starter-topbar-height) !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    align-self: stretch;
 }
 
 body.body--toolbar-hide .layout-tab-bar .item {
-    margin-top: 4px;
-    margin-bottom: 4px;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
-/* 悬浮文档 Tab 与文件树 item 同色；排除只读条（+ / 空白 / 下拉）整条铺色 */
+/* VS Code 式文档 Tab：直角贴条、激活纸色、未激活 chrome、竖线分隔。
+ * 底部分割线画在 Tab 条背景上；激活项铺满纸色盖住那 1px，并抬到 body::after 之上。 */
+#layouts .layout__center .layout-tab-bar {
+    position: relative;
+    z-index: 11;
+    box-sizing: border-box;
+    height: var(--starter-topbar-height);
+    min-height: var(--starter-topbar-height);
+    max-height: var(--starter-topbar-height);
+    background-color: var(--b3-theme-background);
+    background-image: linear-gradient(to top, var(--b3-border-color) 1px, transparent 1px);
+}
+
+/* 文档 Tab 条只占标签宽度，剩余给只读条，好让 + 与下拉之间的空白用来拖窗口 */
+#layouts .layout__center .layout-tab-bar:not(.layout-tab-bar--readonly) {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+#layouts .layout__center .layout-tab-bar--readonly {
+    flex: 1 1 auto;
+    min-width: 71px;
+    display: flex;
+    align-items: center;
+}
+
+#layouts .layout__center .layout-tab-bar--readonly .item--readonly {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    height: var(--starter-topbar-height);
+    min-height: 0;
+    box-sizing: border-box;
+}
+
+#layouts .layout__center .layout-tab-bar--readonly .item--readonly:only-child {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#layouts .layout__center .layout-tab-bar--readonly > .fn__flex-1,
+#layouts .layout__center .layout-tab-bar--readonly .item--readonly > .fn__flex-1 {
+    flex: 1 1 auto;
+    min-width: 24px;
+    align-self: stretch;
+    -webkit-app-region: drag;
+    app-region: drag;
+}
+
+#layouts .layout__center .layout-tab-bar--readonly .block__icon[data-type="new"],
+#layouts .layout__center .layout-tab-bar--readonly .block__icon[data-type="more"] {
+    flex-shrink: 0;
+    align-self: center;
+    margin-top: 0;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+}
+
+#layouts .layout__center .layout-tab-bar .item:not(.item--readonly) {
+    box-sizing: border-box;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none;
+    font-style: normal !important;
+    background-color: transparent;
+    padding: 0 12px;
+    min-height: var(--starter-topbar-height);
+    height: var(--starter-topbar-height);
+    max-height: var(--starter-topbar-height);
+    line-height: var(--starter-topbar-height);
+    border-right: 1px solid var(--b3-border-color);
+}
+
+#layouts .layout__center .layout-tab-bar .item__text {
+    font-style: normal !important;
+    color: var(--b3-theme-on-surface);
+}
+
+#layouts .layout__center .layout-tab-bar .item--focus:not(.item--readonly) {
+    background-color: #ffffff;
+    box-shadow: none;
+}
+
+#layouts .layout__center .layout-tab-bar .item--focus .item__text {
+    color: var(--b3-theme-on-background);
+}
+
+:root[data-theme-mode="dark"] #layouts .layout__center .layout-tab-bar .item--focus:not(.item--readonly) {
+    background-color: #1e1e1e;
+}
+
 #layouts .layout-tab-bar .item:hover:not(.item--focus):not(.item--readonly) {
     background-color: var(--b3-list-hover);
+    box-shadow: inset 0 -1px 0 var(--b3-border-color);
+}
+
+#layouts .layout-tab-bar--readonly .item--readonly {
+    margin: 0;
+    border: none;
+    background-color: transparent;
 }
 
 #layouts .layout-tab-bar--readonly .item--readonly:hover {
@@ -123,13 +252,13 @@ body.body--toolbar-hide::after {
 
 body.body--toolbar-hide #dockRight:not(.starter-dock--sidebar-top),
 body.body--toolbar-hide #dockLeft:not(.starter-dock--sidebar-top) {
-    height: calc(100% - var(--starter-topbar-height));
-    margin-top: var(--starter-topbar-height);
+    height: calc(100% - var(--starter-topbar-height)) !important;
+    margin-top: var(--starter-topbar-height) !important;
 }
 
 body.body--toolbar-hide .layout__dockl:not(.layout--float),
 body.body--toolbar-hide .layout__dockr:not(.layout--float) {
-    margin-top: var(--starter-topbar-height);
+    margin-top: var(--starter-topbar-height) !important;
 }
 
 /* =========================================================
@@ -234,6 +363,63 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
 .layout__dockr,
 .layout__dockb {
     border-radius: 0;
+}
+
+/* 中栏：藏起官方块级面包屑，文档路径条占用同一行且禁止换行 */
+#layouts .layout__center .protyle-breadcrumb {
+    flex-wrap: nowrap;
+    overflow: hidden;
+}
+
+#layouts .layout__center .protyle-breadcrumb > .protyle-breadcrumb__bar:not(.starter-doc-path) {
+    display: none !important;
+}
+
+#layouts .layout__center .starter-doc-path {
+    display: flex;
+    flex-wrap: nowrap !important;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    height: 22px;
+    max-height: 22px;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: 12px;
+    line-height: 22px;
+    color: var(--b3-theme-on-surface);
+}
+
+#layouts .layout__center .starter-doc-path__item {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    border-radius: var(--b3-border-radius-s);
+    padding: 1px 6px;
+    color: var(--b3-theme-on-background);
+}
+
+#layouts .layout__center .starter-doc-path__item--keep {
+    flex-shrink: 1;
+}
+
+#layouts .layout__center .starter-doc-path__item--mid {
+    flex-shrink: 8;
+    min-width: 1.2em;
+}
+
+#layouts .layout__center .starter-doc-path__item:hover {
+    background-color: var(--b3-list-hover);
+}
+
+#layouts .layout__center .starter-doc-path__sep {
+    flex: 0 0 auto;
+    padding: 0 2px;
+    color: var(--b3-theme-on-surface-light);
+    user-select: none;
 }
 
 /* 正文 + 面包屑 + 右侧栏同色；左侧栏与顶栏仍用 chrome 底 */

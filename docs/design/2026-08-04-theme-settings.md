@@ -23,6 +23,8 @@ tags: [settings, dock, theme.js]
 | 2026-08-04 | 配置改为 `/api/file` 写入 `/data/storage/theme/starter/config.json`；启动时读文件，并迁移旧 localStorage |
 | 2026-08-04 | 配置路径改为 `/data/storage/theme/cursorart/config.json`；启动时若仅有旧 `starter` 路径则迁入新路径 |
 | 2026-08-05 | 设置对话框底部显示配置保存路径 |
+| 2026-09-02 | 设置增加「侧栏 / 样式」页签；样式里可开关自定义文档引用 |
+| 2026-09-02 | 两个页签叠在同一窗格里切换，窗口高度不随内容变 |
 
 ## 背景信息
 
@@ -44,7 +46,8 @@ tags: [settings, dock, theme.js]
 **生效与持久化**
 
 - 文件：`/data/storage/theme/cursorart/config.json`（工作区，经 `/api/file/getFile` / `putFile`）
-- 内容：`{ hiddenDockTypes: string[] }`
+- 内容：`{ hiddenDockTypes: string[], customDocRefStyle: boolean }`
+- 对话框页签：**侧栏**（原 dock 图标显隐）、**样式**（链接样式：开=自定义文档引用，关=原生块引用）；`customDocRefStyle` 缺省为 `true`
 - 迁移顺序：新路径 → 旧路径 `/data/storage/theme/starter/config.json` → 旧版 `localStorage["starter-theme-config"]`；后两者读到后写入新路径并尽量清 localStorage
 - `#starterHideDockStyle` 注入 `.dock__item[data-type="…"]{display:none!important}`
 - 保存时若正在显示将被隐藏的面板，先按官方语义收起该面板
@@ -77,6 +80,7 @@ tags: [settings, dock, theme.js]
 
 8. 保存后重启思源，隐藏配置应仍在（检查工作区 `data/storage/theme/cursorart/config.json`）
 9. 若工作区仅有旧 `data/storage/theme/starter/config.json`，首次加载后应出现新路径文件且设置仍生效
+10. 样式页签关闭「链接样式」并保存：文档引用恢复官方紫色、无图标/下划线；再打开应回到自定义样式
 
 ## 其他说明
 

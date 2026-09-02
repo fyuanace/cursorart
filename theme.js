@@ -7,6 +7,7 @@
  * 5) 正文滚动/光标位置同步右侧大纲当前项（复用官方 Outline.setCurrent）
  * 6) 面包屑改为文档路径（笔记本/文件夹/文档），不再显示页内块层级
  * 7) 标题栏截图高度 55 物理像素：CSS = 55 / devicePixelRatio
+ * 8) 指向文档的块引用显示文档图标并加粗（不改标题/段落引用）
  */
 (function () {
     /** 截图/屏幕上量到的标题栏高度（设备像素），不含路径条 */
@@ -41,8 +42,9 @@
         },
     ];
 
-    /** @type {{ hiddenDockTypes: string[] }} */
-    let config = {hiddenDockTypes: []};
+    /** @type {{ hiddenDockTypes: string[], customDocRefStyle: boolean }} */
+    let config = {hiddenDockTypes: [], customDocRefStyle: true};
+    let applyDocRefFeature = () => {};
 
     /** 每侧记住上一次选中的 dock type（展开时用） */
     const lastType = {
@@ -54,6 +56,7 @@
         hiddenDockTypes: Array.isArray(parsed?.hiddenDockTypes)
             ? parsed.hiddenDockTypes.filter((t) => typeof t === "string")
             : [],
+        customDocRefStyle: parsed?.customDocRefStyle !== false,
     });
 
     const readLegacyLocal = () => {
@@ -135,7 +138,7 @@
             await saveConfigToFile(legacy);
             return;
         }
-        config = {hiddenDockTypes: []};
+        config = normalizeConfig({});
     };
 
     const getDock = (layoutKey) => window.siyuan?.layout?.[layoutKey];
@@ -320,20 +323,39 @@
                   .join("")
             : `<div class="b3-label">未检测到侧栏工具图标，请稍后再试。</div>`;
 
+        const docRefChecked = config.customDocRefStyle !== false ? " checked" : "";
+
         const dialog = document.createElement("div");
         dialog.id = DIALOG_ID;
         dialog.className = "b3-dialog b3-dialog--open";
         dialog.innerHTML = `
 <div class="b3-dialog__scrim" data-starter-dlg="scrim"></div>
-<div class="b3-dialog__container" style="width:min(520px,92vw);max-height:80vh">
+<div class="b3-dialog__container starter-settings-window">
   <div class="b3-dialog__header">cursor极简 设置</div>
   <div class="b3-dialog__body">
-    <div class="b3-dialog__content" style="overflow:auto;max-height:calc(80vh - 100px)">
-      <div class="b3-label" style="border-bottom:none;padding-bottom:0">
-        侧栏工具显示
-        <div class="b3-label__text">开关打开 = 显示该工具图标；关闭 = 隐藏（仅本主题生效）</div>
+    <div class="b3-dialog__content starter-settings-content">
+      <div class="starter-settings-tabs">
+        <button type="button" class="starter-settings-tab starter-settings-tab--active" data-starter-dlg="tab" data-starter-tab="dock">侧栏</button>
+        <button type="button" class="starter-settings-tab" data-starter-dlg="tab" data-starter-tab="style">样式</button>
       </div>
-      ${rows}
+      <div class="starter-settings-panes">
+      <div data-starter-pane="dock" class="starter-settings-pane--active">
+        <div class="b3-label" style="border-bottom:none;padding-bottom:0">
+          侧栏工具显示
+          <div class="b3-label__text">开关打开 = 显示该工具图标；关闭 = 隐藏（仅本主题生效）</div>
+        </div>
+        ${rows}
+      </div>
+      <div data-starter-pane="style">
+        <label class="fn__flex b3-label config-item">
+          <div class="fn__flex-1">
+            链接样式
+            <div class="b3-label__text">开启 = 文档引用显示图标、加粗与下划线；关闭 = 思源原生块引用</div>
+          </div>
+          <input class="b3-switch fn__flex-center" type="checkbox" data-starter-doc-ref-style${docRefChecked}>
+        </label>
+      </div>
+      </div>
       <div class="b3-label" style="margin-top:8px">
         配置保存位置
         <div class="b3-label__text" style="word-break:break-all;user-select:text">${CONFIG_PATH}</div>
@@ -362,6 +384,19 @@
                 onClose();
                 return;
             }
+            if (act === "tab") {
+                const tab = t.getAttribute("data-starter-tab");
+                dialog.querySelectorAll("[data-starter-tab]").forEach((btn) => {
+                    btn.classList.toggle("starter-settings-tab--active", btn.getAttribute("data-starter-tab") === tab);
+                });
+                dialog.querySelectorAll("[data-starter-pane]").forEach((pane) => {
+                    pane.classList.toggle(
+                        "starter-settings-pane--active",
+                        pane.getAttribute("data-starter-pane") === tab
+                    );
+                });
+                return;
+            }
             if (act === "save") {
                 const hidden = [];
                 dialog.querySelectorAll("[data-starter-hide-type]").forEach((input) => {
@@ -369,9 +404,11 @@
                         hidden.push(input.getAttribute("data-starter-hide-type"));
                     }
                 });
+                const customDocRefStyle = !!dialog.querySelector("[data-starter-doc-ref-style]")?.checked;
                 closeIfActiveHidden(hidden);
-                saveConfigToFile({hiddenDockTypes: hidden}).then((ok) => {
+                saveConfigToFile({hiddenDockTypes: hidden, customDocRefStyle}).then((ok) => {
                     applyHiddenDockTypes();
+                    applyDocRefFeature();
                     onClose();
                     if (!ok && window.siyuan?.languages) {
                         /* 失败已 console.warn；仍关闭对话框以免卡死 */
@@ -1047,6 +1084,230 @@
         pathCrumbInflight.clear();
     };
 
+    /** 文档块引用：识别 rootID===id，用伪元素画图标并加粗；不写入 span 正文以免存进文档 */
+    const DOC_REF_SEL =
+        ".b3-typography span[data-type~='block-ref'][data-id], " +
+        "#layouts .layout__center .protyle-wysiwyg span[data-type~='block-ref'][data-id]";
+    const docRefCache = new Map();
+    const docRefInflight = new Map();
+    let docRefObs = null;
+    let docRefTimer = 0;
+    let docRefStarted = false;
+
+    const hexToEmoji = (icon) => {
+        if (!icon || /[./]/.test(icon)) {
+            return "";
+        }
+        try {
+            return String.fromCodePoint(
+                ...String(icon)
+                    .split("-")
+                    .map((p) => parseInt(p, 16))
+            );
+        } catch {
+            return "";
+        }
+    };
+
+    const defaultDocGlyph = () => {
+        const raw = window.siyuan?.storage?.["local-images"]?.file || "1f4c4";
+        return hexToEmoji(raw) || "📄";
+    };
+
+    const loadDocRefMeta = (id) => {
+        if (docRefCache.has(id)) {
+            return Promise.resolve(docRefCache.get(id));
+        }
+        if (docRefInflight.has(id)) {
+            return docRefInflight.get(id);
+        }
+        const job = (async () => {
+            const tree = metaFromFileTree(id);
+            if (tree) {
+                docRefCache.set(id, tree);
+                return tree;
+            }
+            const res = await postJson("/api/block/getBlockInfo", {id});
+            const isDoc = res?.code === 0 && res.data?.rootID === id;
+            const meta = {isDoc, icon: isDoc ? res.data?.rootIcon || "" : ""};
+            docRefCache.set(id, meta);
+            return meta;
+        })();
+        docRefInflight.set(id, job);
+        return job.finally(() => docRefInflight.delete(id));
+    };
+
+    const metaFromFileTree = (id) => {
+        const li = document.querySelector(`#layouts .sy__file .b3-list-item[data-node-id="${id}"]`);
+        if (!li) {
+            return null;
+        }
+        const wrap = li.querySelector(":scope > .b3-list-item__icon");
+        const img = wrap?.querySelector("img");
+        const src = img?.getAttribute("src") || "";
+        if (src.includes("/emojis/")) {
+            return {isDoc: true, icon: src.split("/emojis/")[1].split("?")[0]};
+        }
+        if (src.includes("api/icon")) {
+            return {isDoc: true, icon: src.replace(/^https?:\/\/[^/]+/, "").replace(/^\//, "")};
+        }
+        const emoji = wrap?.textContent?.trim() || "";
+        return {isDoc: true, icon: emoji};
+    };
+
+    const collectPendingDocRefs = () => {
+        const spans = [];
+        document.querySelectorAll(DOC_REF_SEL).forEach((span) => {
+            if (!(span instanceof HTMLElement)) {
+                return;
+            }
+            if (span.classList.contains("av__celltext") || span.closest(".code-block, .hljs")) {
+                return;
+            }
+            if (span.classList.contains("starter-doc-ref") || span.classList.contains("starter-doc-ref--skip")) {
+                return;
+            }
+            if (!span.getAttribute("data-id")) {
+                return;
+            }
+            spans.push(span);
+        });
+        return spans;
+    };
+
+    const glyphFromIcon = (icon) => {
+        const hex = hexToEmoji(icon);
+        if (hex) {
+            return hex;
+        }
+        if (icon && !/[./]/.test(icon) && !/^[0-9a-f-]{4,}$/i.test(icon)) {
+            return icon;
+        }
+        return defaultDocGlyph();
+    };
+
+    const paintDocRef = (span, meta) => {
+        span.classList.remove("starter-doc-ref--skip", "starter-doc-ref--icon", "starter-doc-ref--img");
+        span.style.removeProperty("--starter-doc-ref-glyph");
+        span.style.removeProperty("--starter-doc-ref-img");
+        if (!meta.isDoc) {
+            span.classList.add("starter-doc-ref--skip");
+            span.classList.remove("starter-doc-ref");
+            return;
+        }
+        span.classList.add("starter-doc-ref");
+        const icon = (meta.icon || "").trim();
+        if (icon && (icon.includes(".") || icon.startsWith("api/"))) {
+            const src = icon.startsWith("api/") || icon.startsWith("/")
+                ? `/${icon.replace(/^\//, "")}`
+                : `/emojis/${icon}`;
+            span.classList.add("starter-doc-ref--img");
+            span.style.setProperty("--starter-doc-ref-img", `url("${src}")`);
+            return;
+        }
+        const glyph = glyphFromIcon(icon);
+        span.classList.add("starter-doc-ref--icon");
+        span.style.setProperty("--starter-doc-ref-glyph", `"${glyph}"`);
+    };
+
+    const refreshDocRefs = async () => {
+        const spans = collectPendingDocRefs();
+        if (!spans.length) {
+            return;
+        }
+        const needApi = [];
+        for (const span of spans) {
+            const id = span.getAttribute("data-id");
+            let meta = docRefCache.get(id);
+            if (!meta) {
+                const tree = metaFromFileTree(id);
+                if (tree) {
+                    docRefCache.set(id, tree);
+                    meta = tree;
+                }
+            }
+            if (meta) {
+                paintDocRef(span, meta);
+            } else {
+                needApi.push(span);
+            }
+        }
+        if (!needApi.length) {
+            return;
+        }
+        const ids = [...new Set(needApi.map((span) => span.getAttribute("data-id")))];
+        await Promise.all(ids.map((id) => loadDocRefMeta(id)));
+        for (const span of needApi) {
+            if (!span.isConnected) {
+                continue;
+            }
+            const meta = docRefCache.get(span.getAttribute("data-id"));
+            if (meta) {
+                paintDocRef(span, meta);
+            }
+        }
+    };
+
+    const scheduleDocRefs = () => {
+        if (docRefTimer) {
+            return;
+        }
+        docRefTimer = requestAnimationFrame(() => {
+            docRefTimer = 0;
+            refreshDocRefs();
+        });
+    };
+
+    const startDocRefs = () => {
+        if (docRefStarted) {
+            refreshDocRefs();
+            return;
+        }
+        docRefStarted = true;
+        document.addEventListener("loaded-protyle-static", scheduleDocRefs);
+        document.addEventListener("switch-protyle", scheduleDocRefs);
+        const host = document.querySelector("#layouts .layout__center") || document.body;
+        docRefObs = new MutationObserver(scheduleDocRefs);
+        docRefObs.observe(host, {childList: true, subtree: true});
+        refreshDocRefs();
+    };
+
+    const stopDocRefs = () => {
+        document.removeEventListener("loaded-protyle-static", scheduleDocRefs);
+        document.removeEventListener("switch-protyle", scheduleDocRefs);
+        docRefObs?.disconnect();
+        docRefObs = null;
+        if (docRefTimer) {
+            cancelAnimationFrame(docRefTimer);
+            docRefTimer = 0;
+        }
+        document.querySelectorAll(".starter-doc-ref, .starter-doc-ref--skip").forEach((el) => {
+            el.classList.remove(
+                "starter-doc-ref",
+                "starter-doc-ref--skip",
+                "starter-doc-ref--icon",
+                "starter-doc-ref--img"
+            );
+            if (el instanceof HTMLElement) {
+                el.style.removeProperty("--starter-doc-ref-glyph");
+                el.style.removeProperty("--starter-doc-ref-img");
+            }
+        });
+        docRefCache.clear();
+        docRefInflight.clear();
+        docRefStarted = false;
+    };
+
+    applyDocRefFeature = () => {
+        const on = config.customDocRefStyle !== false;
+        document.documentElement.classList.toggle("starter-custom-doc-ref", on);
+        if (on) {
+            startDocRefs();
+        } else {
+            stopDocRefs();
+        }
+    };
+
     const applyTopbarHeight = () => {
         const dpr = window.devicePixelRatio || 1;
         const cssPx = TOPBAR_SCREEN_PX / dpr;
@@ -1074,6 +1335,7 @@
         applyHiddenDockTypes();
         startOutlineFollow();
         startPathBreadcrumb();
+        applyDocRefFeature();
         const okDocks = mountAllDocks();
         const okToggles = mountToggles();
         const okMenu = bindPluginsMenu();
@@ -1104,6 +1366,8 @@
         stopTopbarHeight();
         stopOutlineFollow();
         stopPathBreadcrumb();
+        document.documentElement.classList.remove("starter-custom-doc-ref");
+        stopDocRefs();
         unbindPluginsMenu();
         closeSettingsDialog();
         document.getElementById(HIDE_STYLE_ID)?.remove();

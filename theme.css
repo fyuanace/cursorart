@@ -476,6 +476,77 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     color: #d6716a;
 }
 
+/* 文档引用：仅 html.starter-custom-doc-ref 时覆盖原生；未就绪只改字色加粗 */
+html.starter-custom-doc-ref .b3-typography span[data-type~="block-ref"][data-id]:not(.starter-doc-ref--skip):not(.starter-doc-ref--icon):not(.starter-doc-ref--img):not(.av__celltext),
+html.starter-custom-doc-ref .protyle-wysiwyg [data-node-id] span[data-type~="block-ref"][data-id]:not(.starter-doc-ref--skip):not(.starter-doc-ref--icon):not(.starter-doc-ref--img):not(.av__celltext) {
+    font-weight: 700;
+    color: var(--b3-theme-on-background);
+    text-decoration: none;
+    border-bottom: none;
+    transition: none;
+}
+
+html.starter-custom-doc-ref .b3-typography span[data-type~="block-ref"][data-id].starter-doc-ref--icon,
+html.starter-custom-doc-ref .b3-typography span[data-type~="block-ref"][data-id].starter-doc-ref--img,
+html.starter-custom-doc-ref .protyle-wysiwyg [data-node-id] span[data-type~="block-ref"][data-id].starter-doc-ref--icon,
+html.starter-custom-doc-ref .protyle-wysiwyg [data-node-id] span[data-type~="block-ref"][data-id].starter-doc-ref--img {
+    position: relative;
+    padding-left: 1.28em;
+    padding-bottom: 0.14em;
+    font-weight: 700;
+    color: var(--b3-theme-on-background);
+    text-decoration: none;
+    background-image: linear-gradient(var(--b3-border-color), var(--b3-border-color));
+    background-repeat: no-repeat;
+    background-size: 100% 1px;
+    background-position: 0 100%;
+    background-origin: content-box;
+    background-clip: content-box;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    transition: none;
+}
+
+html.starter-custom-doc-ref .b3-typography span[data-type~="block-ref"].starter-doc-ref--skip,
+html.starter-custom-doc-ref .protyle-wysiwyg [data-node-id] span[data-type~="block-ref"].starter-doc-ref--skip {
+    font-weight: inherit;
+    color: var(--b3-protyle-inline-blockref-color);
+    text-decoration: none;
+    border-bottom: none;
+    padding: 0;
+    background-image: none;
+}
+
+html.starter-custom-doc-ref .starter-doc-ref.starter-doc-ref--icon::before,
+html.starter-custom-doc-ref .starter-doc-ref.starter-doc-ref--img::before {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: block;
+    width: 1.05em;
+    margin: 0;
+    pointer-events: none;
+    background-image: none;
+}
+
+html.starter-custom-doc-ref .starter-doc-ref.starter-doc-ref--icon::before {
+    content: var(--starter-doc-ref-glyph);
+    font-weight: 400;
+    font-family: var(--b3-font-family-emoji);
+    line-height: 1;
+    text-align: center;
+    speak: never;
+}
+
+html.starter-custom-doc-ref .starter-doc-ref.starter-doc-ref--img::before {
+    content: "";
+    width: 1.05em;
+    height: 1.05em;
+    vertical-align: -0.18em;
+    background: var(--starter-doc-ref-img) center / contain no-repeat;
+}
+
 body.body--toolbar-hide .layout__wnd--left .layout-tab-container,
 body.body--toolbar-hide .layout__wnd--right .layout-tab-container {
     border-top-left-radius: 0;
@@ -560,4 +631,57 @@ body:not(.body--toolbar-hide) #toolbar .toolbar__item--close {
     height: 27px;
     padding-top: 6px;
     padding-bottom: 6px;
+}
+
+#starterSettingsDialog .starter-settings-window {
+    width: min(520px, 92vw);
+    max-height: 80vh;
+}
+
+#starterSettingsDialog .starter-settings-content {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    max-height: calc(80vh - 100px);
+}
+
+#starterSettingsDialog .starter-settings-panes {
+    display: grid;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+#starterSettingsDialog [data-starter-pane] {
+    grid-area: 1 / 1;
+}
+
+#starterSettingsDialog [data-starter-pane]:not(.starter-settings-pane--active) {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+#starterSettingsDialog .starter-settings-tabs {
+    display: flex;
+    flex-shrink: 0;
+    gap: 4px;
+    margin: 0 0 8px;
+    border-bottom: 1px solid var(--b3-border-color);
+}
+
+#starterSettingsDialog .starter-settings-tab {
+    appearance: none;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    padding: 8px 14px;
+    cursor: pointer;
+    color: var(--b3-theme-on-surface);
+    font: inherit;
+}
+
+#starterSettingsDialog .starter-settings-tab--active {
+    color: var(--b3-theme-on-background);
+    border-bottom-color: var(--b3-theme-primary);
 }

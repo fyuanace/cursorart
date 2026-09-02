@@ -882,6 +882,7 @@
         document.addEventListener("selectionchange", onSelectionOutlineFollow);
         document.addEventListener("loaded-protyle-static", onProtyleSwitchOutlineFollow);
         document.addEventListener("switch-protyle", onProtyleSwitchOutlineFollow);
+        startOutlineDefaultExpand();
     };
 
     const stopOutlineFollow = () => {
@@ -890,12 +891,138 @@
         document.removeEventListener("selectionchange", onSelectionOutlineFollow);
         document.removeEventListener("loaded-protyle-static", onProtyleSwitchOutlineFollow);
         document.removeEventListener("switch-protyle", onProtyleSwitchOutlineFollow);
+        stopOutlineDefaultExpand();
         if (outlineFollowRaf) {
             cancelAnimationFrame(outlineFollowRaf);
             outlineFollowRaf = 0;
         }
         outlineFollowPending = null;
         outlineJumpUntil = 0;
+    };
+
+    /** 大纲：第一次成为父标题时默认展开，不改用户已折叠的项 */
+    const outlineKnownParents = new Set();
+    const outlinePrimedRoots = new Set();
+    let outlineExpandObs = null;
+    let outlineExpandRaf = 0;
+
+    const outlineIsFiltering = (outlineEl) => {
+        const input = outlineEl
+            ?.closest?.(".sy__outline, .fn__flex-1")
+            ?.querySelector?.("input.b3-text-field.search__label");
+        return !!(input && input.value);
+    };
+
+    const expandOutlineLi = (li) => {
+        const arrow = li.querySelector(".b3-list-item__arrow");
+        arrow?.classList.add("b3-list-item__arrow--open");
+        const next = li.nextElementSibling;
+        if (next && next.tagName === "UL") {
+            next.classList.remove("fn__none");
+        }
+        if (next?.nextElementSibling?.tagName === "UL") {
+            next.nextElementSibling.classList.remove("fn__none");
+        }
+    };
+
+    const expandNewOutlineParents = () => {
+        for (const outline of collectOutlineModels()) {
+            const el = outline.element;
+            if (!(el instanceof HTMLElement) || outlineIsFiltering(el)) {
+                continue;
+            }
+            const rootId = outline.blockId || "";
+            const parents = [];
+            el.querySelectorAll("li.b3-list-item[data-node-id]").forEach((li) => {
+                const next = li.nextElementSibling;
+                const id = li.getAttribute("data-node-id");
+                if (!id) {
+                    return;
+                }
+                if (next && next.tagName === "UL") {
+                    parents.push({
+                        li,
+                        id,
+                        collapsed: next.classList.contains("fn__none"),
+                    });
+                } else {
+                    outlineKnownParents.delete(id);
+                }
+            });
+            if (!outlinePrimedRoots.has(rootId)) {
+                const allCollapsed = parents.length > 0 && parents.every((p) => p.collapsed);
+                if (allCollapsed) {
+                    parents.forEach((p) => {
+                        expandOutlineLi(p.li);
+                        outlineKnownParents.add(p.id);
+                    });
+                    if (typeof outline.saveExpendIds === "function") {
+                        outline.saveExpendIds();
+                    }
+                } else {
+                    parents.forEach((p) => outlineKnownParents.add(p.id));
+                }
+                outlinePrimedRoots.add(rootId);
+                continue;
+            }
+            let changed = false;
+            parents.forEach((p) => {
+                if (outlineKnownParents.has(p.id)) {
+                    return;
+                }
+                outlineKnownParents.add(p.id);
+                if (p.collapsed) {
+                    expandOutlineLi(p.li);
+                    changed = true;
+                }
+            });
+            if (changed && typeof outline.saveExpendIds === "function") {
+                outline.saveExpendIds();
+            }
+        }
+    };
+
+    const scheduleOutlineDefaultExpand = () => {
+        if (outlineExpandRaf) {
+            return;
+        }
+        outlineExpandRaf = requestAnimationFrame(() => {
+            outlineExpandRaf = 0;
+            expandNewOutlineParents();
+        });
+    };
+
+    const startOutlineDefaultExpand = () => {
+        outlineExpandObs?.disconnect();
+        const host = document.querySelector("#layouts") || document.body;
+        outlineExpandObs = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                const t = m.target;
+                if (t instanceof Element && t.closest(".sy__outline")) {
+                    scheduleOutlineDefaultExpand();
+                    return;
+                }
+                for (const n of m.addedNodes) {
+                    if (n.nodeType === 1 && (n.classList?.contains("sy__outline") || n.querySelector?.(".sy__outline"))) {
+                        scheduleOutlineDefaultExpand();
+                        return;
+                    }
+                }
+            }
+        });
+        outlineExpandObs.observe(host, {childList: true, subtree: true});
+        scheduleOutlineDefaultExpand();
+    };
+
+    const stopOutlineDefaultExpand = () => {
+        outlineExpandObs?.disconnect();
+        outlineExpandObs = null;
+        if (outlineExpandRaf) {
+            cancelAnimationFrame(outlineExpandRaf);
+            outlineExpandRaf = 0;
+        }
+        outlineKnownParents.clear();
+        outlinePrimedRoots.clear();
     };
 
     /** 面包屑：隐藏官方块级条，在旁边画文档路径（避免官方异步 render 盖掉） */

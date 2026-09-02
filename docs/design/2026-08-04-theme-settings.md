@@ -8,6 +8,8 @@ summary: >
   cursor极简设置入口挂在 #barPlugins；可配置隐藏 dock 工具，写入工作区文件持久化。
 related:
   - design/2026-08-04-toolbar-titlebar.md
+  - design/2026-09-02-table-header.md
+  - design/2026-09-02-block-line-height.md
 tags: [settings, dock, theme.js]
 ---
 
@@ -25,6 +27,7 @@ tags: [settings, dock, theme.js]
 | 2026-08-05 | 设置对话框底部显示配置保存路径 |
 | 2026-09-02 | 设置增加「侧栏 / 样式」页签；样式里可开关自定义文档引用 |
 | 2026-09-02 | 两个页签叠在同一窗格里切换，窗口高度不随内容变 |
+| 2026-09-02 | 样式页签增加「表格表头不加粗」开关与「块行间距」滑杆 |
 
 ## 背景信息
 
@@ -46,8 +49,9 @@ tags: [settings, dock, theme.js]
 **生效与持久化**
 
 - 文件：`/data/storage/theme/cursorart/config.json`（工作区，经 `/api/file/getFile` / `putFile`）
-- 内容：`{ hiddenDockTypes: string[], customDocRefStyle: boolean }`
-- 对话框页签：**侧栏**（原 dock 图标显隐）、**样式**（链接样式：开=自定义文档引用，关=原生块引用）；`customDocRefStyle` 缺省为 `true`
+- 内容：`{ hiddenDockTypes: string[], customDocRefStyle: boolean, plainTableHead: boolean, blockLineHeight: number }`
+- 对话框页签：**侧栏**（原 dock 图标显隐）、**样式**（链接样式、表格表头不加粗、块行间距）；`customDocRefStyle` / `plainTableHead` 缺省为 `true`，`blockLineHeight` 缺省 `1.625`（范围 1.2–2.6）
+- 滑杆拖动即时改行高；表头开关即时预览；取消 / Esc / 点遮罩则还原未保存值
 - 迁移顺序：新路径 → 旧路径 `/data/storage/theme/starter/config.json` → 旧版 `localStorage["starter-theme-config"]`；后两者读到后写入新路径并尽量清 localStorage
 - `#starterHideDockStyle` 注入 `.dock__item[data-type="…"]{display:none!important}`
 - 保存时若正在显示将被隐藏的面板，先按官方语义收起该面板
@@ -55,7 +59,7 @@ tags: [settings, dock, theme.js]
 
 **卸载**
 
-- `destroyTheme` 移除菜单监听、对话框、隐藏样式
+- `destroyTheme` 移除菜单监听、对话框、隐藏样式，以及 `starter-plain-table-head` / `starter-block-line-height` 与 `--starter-block-line-height`
 
 **已选中图标再点**
 
@@ -81,6 +85,8 @@ tags: [settings, dock, theme.js]
 8. 保存后重启思源，隐藏配置应仍在（检查工作区 `data/storage/theme/cursorart/config.json`）
 9. 若工作区仅有旧 `data/storage/theme/starter/config.json`，首次加载后应出现新路径文件且设置仍生效
 10. 样式页签关闭「链接样式」并保存：文档引用恢复官方紫色、无图标/下划线；再打开应回到自定义样式
+11. 样式页签关闭「表格表头不加粗」并保存：表头恢复官方加粗；再打开应与单元格同字重
+12. 样式页签拖动「块行间距」应即时改变正文段落行高；取消后应回到保存值；保存后重启仍生效
 
 ## 其他说明
 

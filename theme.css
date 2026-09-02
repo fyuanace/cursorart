@@ -476,75 +476,32 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     color: #d6716a;
 }
 
-/* 文档引用：仅 html.starter-custom-doc-ref 时覆盖原生；未就绪只改字色加粗 */
-html.starter-custom-doc-ref .b3-typography span[data-type~="block-ref"][data-id]:not(.starter-doc-ref--skip):not(.starter-doc-ref--icon):not(.starter-doc-ref--img):not(.av__celltext),
-html.starter-custom-doc-ref .protyle-wysiwyg [data-node-id] span[data-type~="block-ref"][data-id]:not(.starter-doc-ref--skip):not(.starter-doc-ref--icon):not(.starter-doc-ref--img):not(.av__celltext) {
+/* 表格表头与正文同字重（仅 html.starter-plain-table-head；官方 thead th 强制粗体，需压过） */
+html.starter-plain-table-head .b3-typography table thead th,
+html.starter-plain-table-head .protyle-wysiwyg table thead th,
+html.starter-plain-table-head .protyle-wysiwyg [data-node-id] table thead th {
+    font-weight: 400 !important;
+}
+
+html.starter-plain-table-head .b3-typography table thead th *:not(strong):not(b):not([data-type~="strong"]),
+html.starter-plain-table-head .protyle-wysiwyg table thead th *:not(strong):not(b):not([data-type~="strong"]) {
+    font-weight: inherit !important;
+}
+
+/* 正文段落行高（仅 html.starter-block-line-height；不改列表/标题整块以免叠距） */
+html.starter-block-line-height .protyle-wysiwyg [data-node-id].p,
+html.starter-block-line-height .b3-typography p {
+    line-height: var(--starter-block-line-height);
+}
+
+/* 文档引用：未判定前只改正文色+加粗；图标/下划线由 #starterDocRefStyle 按 data-id 注入，禁止写 span.style */
+html.starter-custom-doc-ref .b3-typography span[data-type~="block-ref"][data-id]:not(.av__celltext),
+html.starter-custom-doc-ref .protyle-wysiwyg [data-node-id] span[data-type~="block-ref"][data-id]:not(.av__celltext) {
     font-weight: 700;
     color: var(--b3-theme-on-background);
     text-decoration: none;
     border-bottom: none;
     transition: none;
-}
-
-html.starter-custom-doc-ref .b3-typography span[data-type~="block-ref"][data-id].starter-doc-ref--icon,
-html.starter-custom-doc-ref .b3-typography span[data-type~="block-ref"][data-id].starter-doc-ref--img,
-html.starter-custom-doc-ref .protyle-wysiwyg [data-node-id] span[data-type~="block-ref"][data-id].starter-doc-ref--icon,
-html.starter-custom-doc-ref .protyle-wysiwyg [data-node-id] span[data-type~="block-ref"][data-id].starter-doc-ref--img {
-    position: relative;
-    padding-left: 1.28em;
-    padding-bottom: 0.14em;
-    font-weight: 700;
-    color: var(--b3-theme-on-background);
-    text-decoration: none;
-    background-image: linear-gradient(var(--b3-border-color), var(--b3-border-color));
-    background-repeat: no-repeat;
-    background-size: 100% 1px;
-    background-position: 0 100%;
-    background-origin: content-box;
-    background-clip: content-box;
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
-    transition: none;
-}
-
-html.starter-custom-doc-ref .b3-typography span[data-type~="block-ref"].starter-doc-ref--skip,
-html.starter-custom-doc-ref .protyle-wysiwyg [data-node-id] span[data-type~="block-ref"].starter-doc-ref--skip {
-    font-weight: inherit;
-    color: var(--b3-protyle-inline-blockref-color);
-    text-decoration: none;
-    border-bottom: none;
-    padding: 0;
-    background-image: none;
-}
-
-html.starter-custom-doc-ref .starter-doc-ref.starter-doc-ref--icon::before,
-html.starter-custom-doc-ref .starter-doc-ref.starter-doc-ref--img::before {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    display: block;
-    width: 1.05em;
-    margin: 0;
-    pointer-events: none;
-    background-image: none;
-}
-
-html.starter-custom-doc-ref .starter-doc-ref.starter-doc-ref--icon::before {
-    content: var(--starter-doc-ref-glyph);
-    font-weight: 400;
-    font-family: var(--b3-font-family-emoji);
-    line-height: 1;
-    text-align: center;
-    speak: never;
-}
-
-html.starter-custom-doc-ref .starter-doc-ref.starter-doc-ref--img::before {
-    content: "";
-    width: 1.05em;
-    height: 1.05em;
-    vertical-align: -0.18em;
-    background: var(--starter-doc-ref-img) center / contain no-repeat;
 }
 
 body.body--toolbar-hide .layout__wnd--left .layout-tab-container,
@@ -684,4 +641,21 @@ body:not(.body--toolbar-hide) #toolbar .toolbar__item--close {
 #starterSettingsDialog .starter-settings-tab--active {
     color: var(--b3-theme-on-background);
     border-bottom-color: var(--b3-theme-primary);
+}
+
+#starterSettingsDialog .starter-settings-lh {
+    align-items: center;
+    flex-shrink: 0;
+    gap: 10px;
+    min-width: 160px;
+}
+
+#starterSettingsDialog .starter-settings-lh .b3-slider {
+    width: 120px;
+}
+
+#starterSettingsDialog .starter-settings-lh__val {
+    min-width: 2.6em;
+    color: var(--b3-theme-on-surface);
+    font-variant-numeric: tabular-nums;
 }

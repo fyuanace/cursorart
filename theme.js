@@ -42,9 +42,24 @@
         },
     ];
 
-    /** @type {{ hiddenDockTypes: string[], customDocRefStyle: boolean }} */
-    let config = {hiddenDockTypes: [], customDocRefStyle: true};
+    const DEFAULT_BLOCK_LH = 1.625;
+    const clampBlockLh = (n) => {
+        const x = Number(n);
+        if (!Number.isFinite(x)) {
+            return DEFAULT_BLOCK_LH;
+        }
+        return Math.min(2.6, Math.max(1.2, Math.round(x * 20) / 20));
+    };
+
+    /** @type {{ hiddenDockTypes: string[], customDocRefStyle: boolean, plainTableHead: boolean, blockLineHeight: number }} */
+    let config = {
+        hiddenDockTypes: [],
+        customDocRefStyle: true,
+        plainTableHead: true,
+        blockLineHeight: DEFAULT_BLOCK_LH,
+    };
     let applyDocRefFeature = () => {};
+    let applyStyleFeatures = () => {};
 
     /** 每侧记住上一次选中的 dock type（展开时用） */
     const lastType = {
@@ -57,6 +72,8 @@
             ? parsed.hiddenDockTypes.filter((t) => typeof t === "string")
             : [],
         customDocRefStyle: parsed?.customDocRefStyle !== false,
+        plainTableHead: parsed?.plainTableHead !== false,
+        blockLineHeight: clampBlockLh(parsed?.blockLineHeight ?? DEFAULT_BLOCK_LH),
     });
 
     const readLegacyLocal = () => {
@@ -324,6 +341,8 @@
             : `<div class="b3-label">未检测到侧栏工具图标，请稍后再试。</div>`;
 
         const docRefChecked = config.customDocRefStyle !== false ? " checked" : "";
+        const tableHeadChecked = config.plainTableHead !== false ? " checked" : "";
+        const blockLh = clampBlockLh(config.blockLineHeight);
 
         const dialog = document.createElement("div");
         dialog.id = DIALOG_ID;
@@ -354,6 +373,23 @@
           </div>
           <input class="b3-switch fn__flex-center" type="checkbox" data-starter-doc-ref-style${docRefChecked}>
         </label>
+        <label class="fn__flex b3-label config-item">
+          <div class="fn__flex-1">
+            表格表头不加粗
+            <div class="b3-label__text">开启 = 表头与单元格同字重；关闭 = 官方强制加粗</div>
+          </div>
+          <input class="b3-switch fn__flex-center" type="checkbox" data-starter-plain-table-head${tableHeadChecked}>
+        </label>
+        <label class="fn__flex b3-label config-item">
+          <div class="fn__flex-1">
+            块行间距
+            <div class="b3-label__text">正文行高倍数，官方约 1.625</div>
+          </div>
+          <div class="fn__flex starter-settings-lh">
+            <input class="b3-slider" type="range" min="1.2" max="2.6" step="0.05" value="${blockLh}" data-starter-block-lh>
+            <span class="starter-settings-lh__val" data-starter-block-lh-val>${blockLh.toFixed(2)}</span>
+          </div>
+        </label>
       </div>
       </div>
       <div class="b3-label" style="margin-top:8px">
@@ -369,7 +405,10 @@
   </div>
 </div>`;
 
-        const onClose = () => {
+        const onClose = (revert) => {
+            if (revert) {
+                applyStyleFeatures();
+            }
             dialog.removeEventListener("click", onClick);
             document.removeEventListener("keydown", onKey, true);
             closeSettingsDialog();
@@ -381,7 +420,7 @@
             }
             const act = t.getAttribute("data-starter-dlg");
             if (act === "scrim" || act === "cancel") {
-                onClose();
+                onClose(true);
                 return;
             }
             if (act === "tab") {
@@ -405,10 +444,18 @@
                     }
                 });
                 const customDocRefStyle = !!dialog.querySelector("[data-starter-doc-ref-style]")?.checked;
+                const plainTableHead = !!dialog.querySelector("[data-starter-plain-table-head]")?.checked;
+                const blockLineHeight = clampBlockLh(dialog.querySelector("[data-starter-block-lh]")?.value);
                 closeIfActiveHidden(hidden);
-                saveConfigToFile({hiddenDockTypes: hidden, customDocRefStyle}).then((ok) => {
+                saveConfigToFile({
+                    hiddenDockTypes: hidden,
+                    customDocRefStyle,
+                    plainTableHead,
+                    blockLineHeight,
+                }).then((ok) => {
                     applyHiddenDockTypes();
                     applyDocRefFeature();
+                    applyStyleFeatures();
                     onClose();
                     if (!ok && window.siyuan?.languages) {
                         /* 失败已 console.warn；仍关闭对话框以免卡死 */
@@ -419,12 +466,25 @@
         const onKey = (e) => {
             if (e.key === "Escape") {
                 e.stopPropagation();
-                onClose();
+                onClose(true);
             }
         };
         dialog.addEventListener("click", onClick);
         document.addEventListener("keydown", onKey, true);
         document.body.appendChild(dialog);
+        const lhInput = dialog.querySelector("[data-starter-block-lh]");
+        const lhVal = dialog.querySelector("[data-starter-block-lh-val]");
+        lhInput?.addEventListener("input", () => {
+            const v = clampBlockLh(lhInput.value);
+            if (lhVal) {
+                lhVal.textContent = v.toFixed(2);
+            }
+            document.documentElement.classList.add("starter-block-line-height");
+            document.documentElement.style.setProperty("--starter-block-line-height", String(v));
+        });
+        dialog.querySelector("[data-starter-plain-table-head]")?.addEventListener("change", (e) => {
+            document.documentElement.classList.toggle("starter-plain-table-head", !!e.target.checked);
+        });
     };
 
     const injectPluginsMenuItem = () => {
@@ -1084,15 +1144,26 @@
         pathCrumbInflight.clear();
     };
 
-    /** 文档块引用：识别 rootID===id，用伪元素画图标并加粗；不写入 span 正文以免存进文档 */
+    /** 文档块引用：识别 rootID===id；图标写进 document 样式表，禁止改 span.style / 正文 */
     const DOC_REF_SEL =
         ".b3-typography span[data-type~='block-ref'][data-id], " +
         "#layouts .layout__center .protyle-wysiwyg span[data-type~='block-ref'][data-id]";
+    const DOC_REF_STYLE_ID = "starterDocRefStyle";
+    const DOC_REF_LEAK_RE = /\{:[^}]*--starter-doc-ref-[^}]*\}/g;
+    const DOC_REF_CLASSES = [
+        "starter-doc-ref",
+        "starter-doc-ref--skip",
+        "starter-doc-ref--icon",
+        "starter-doc-ref--img",
+    ];
     const docRefCache = new Map();
     const docRefInflight = new Map();
+    /** @type {Map<string, {kind: "skip"|"icon"|"img", glyph?: string, src?: string}>} */
+    const docRefPainted = new Map();
     let docRefObs = null;
     let docRefTimer = 0;
     let docRefStarted = false;
+    let docRefCleaning = false;
 
     const hexToEmoji = (icon) => {
         if (!icon || /[./]/.test(icon)) {
@@ -1155,16 +1226,13 @@
         return {isDoc: true, icon: emoji};
     };
 
-    const collectPendingDocRefs = () => {
+    const collectDocRefSpans = () => {
         const spans = [];
         document.querySelectorAll(DOC_REF_SEL).forEach((span) => {
             if (!(span instanceof HTMLElement)) {
                 return;
             }
             if (span.classList.contains("av__celltext") || span.closest(".code-block, .hljs")) {
-                return;
-            }
-            if (span.classList.contains("starter-doc-ref") || span.classList.contains("starter-doc-ref--skip")) {
                 return;
             }
             if (!span.getAttribute("data-id")) {
@@ -1186,35 +1254,184 @@
         return defaultDocGlyph();
     };
 
-    const paintDocRef = (span, meta) => {
-        span.classList.remove("starter-doc-ref--skip", "starter-doc-ref--icon", "starter-doc-ref--img");
-        span.style.removeProperty("--starter-doc-ref-glyph");
-        span.style.removeProperty("--starter-doc-ref-img");
+    const escCssId = (id) => (window.CSS?.escape ? CSS.escape(id) : String(id));
+
+    const cssContent = (s) => `"${String(s).replace(/\\/g, "\\\\").replace(/"/g, "\\\"")}"`;
+
+    const docRefSels = (ids, pseudo = "") =>
+        ids
+            .flatMap((id) => {
+                const e = escCssId(id);
+                return [
+                    `html.starter-custom-doc-ref .b3-typography span[data-type~="block-ref"][data-id="${e}"]:not(.av__celltext)${pseudo}`,
+                    `html.starter-custom-doc-ref .protyle-wysiwyg [data-node-id] span[data-type~="block-ref"][data-id="${e}"]:not(.av__celltext)${pseudo}`,
+                ];
+            })
+            .join(",\n");
+
+    const metaToPaint = (meta) => {
         if (!meta.isDoc) {
-            span.classList.add("starter-doc-ref--skip");
-            span.classList.remove("starter-doc-ref");
-            return;
+            return {kind: "skip"};
         }
-        span.classList.add("starter-doc-ref");
         const icon = (meta.icon || "").trim();
         if (icon && (icon.includes(".") || icon.startsWith("api/"))) {
             const src = icon.startsWith("api/") || icon.startsWith("/")
                 ? `/${icon.replace(/^\//, "")}`
                 : `/emojis/${icon}`;
-            span.classList.add("starter-doc-ref--img");
-            span.style.setProperty("--starter-doc-ref-img", `url("${src}")`);
-            return;
+            return {kind: "img", src};
         }
-        const glyph = glyphFromIcon(icon);
-        span.classList.add("starter-doc-ref--icon");
-        span.style.setProperty("--starter-doc-ref-glyph", `"${glyph}"`);
+        return {kind: "icon", glyph: glyphFromIcon(icon)};
+    };
+
+    const rememberDocRef = (id, meta) => {
+        const next = metaToPaint(meta);
+        const prev = docRefPainted.get(id);
+        if (prev && prev.kind === next.kind && prev.glyph === next.glyph && prev.src === next.src) {
+            return false;
+        }
+        docRefPainted.set(id, next);
+        return true;
+    };
+
+    const renderDocRefSheet = () => {
+        let el = document.getElementById(DOC_REF_STYLE_ID);
+        if (!el) {
+            el = document.createElement("style");
+            el.id = DOC_REF_STYLE_ID;
+            document.head.appendChild(el);
+        }
+        const skips = [];
+        const docs = [];
+        const icons = new Map();
+        const imgs = new Map();
+        for (const [id, info] of docRefPainted) {
+            if (info.kind === "skip") {
+                skips.push(id);
+                continue;
+            }
+            docs.push(id);
+            if (info.kind === "icon") {
+                const list = icons.get(info.glyph) || [];
+                list.push(id);
+                icons.set(info.glyph, list);
+            } else if (info.src) {
+                const list = imgs.get(info.src) || [];
+                list.push(id);
+                imgs.set(info.src, list);
+            }
+        }
+        const parts = [];
+        if (skips.length) {
+            parts.push(`${docRefSels(skips)} {
+    font-weight: inherit;
+    color: var(--b3-protyle-inline-blockref-color);
+    text-decoration: none;
+    border-bottom: none;
+    padding: 0;
+    background-image: none;
+}`);
+        }
+        if (docs.length) {
+            parts.push(`${docRefSels(docs)} {
+    position: relative;
+    padding-left: 1.28em;
+    padding-bottom: 0.14em;
+    font-weight: 700;
+    color: var(--b3-theme-on-background);
+    text-decoration: none;
+    background-image: linear-gradient(var(--b3-border-color), var(--b3-border-color));
+    background-repeat: no-repeat;
+    background-size: 100% 1px;
+    background-position: 0 100%;
+    background-origin: content-box;
+    background-clip: content-box;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    transition: none;
+}`);
+            parts.push(`${docRefSels(docs, "::before")} {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: block;
+    width: 1.05em;
+    margin: 0;
+    pointer-events: none;
+    background-image: none;
+}`);
+        }
+        for (const [glyph, ids] of icons) {
+            parts.push(`${docRefSels(ids, "::before")} {
+    content: ${cssContent(glyph)};
+    font-weight: 400;
+    font-family: var(--b3-font-family-emoji);
+    line-height: 1;
+    text-align: center;
+    speak: never;
+}`);
+        }
+        for (const [src, ids] of imgs) {
+            const url = String(src).replace(/\\/g, "/").replace(/"/g, "%22");
+            parts.push(`${docRefSels(ids, "::before")} {
+    content: "";
+    width: 1.05em;
+    height: 1.05em;
+    vertical-align: -0.18em;
+    background: url("${url}") center / contain no-repeat;
+}`);
+        }
+        el.textContent = parts.join("\n");
+    };
+
+    const stripDocRefPollution = (span) => {
+        let textChanged = false;
+        span.style.removeProperty("--starter-doc-ref-glyph");
+        span.style.removeProperty("--starter-doc-ref-img");
+        if (span.getAttribute("style") === "") {
+            span.removeAttribute("style");
+        }
+        span.classList.remove(...DOC_REF_CLASSES);
+        const cleanText = (node) => {
+            if (!node || node.nodeType !== Node.TEXT_NODE) {
+                return;
+            }
+            const next = node.textContent.replace(DOC_REF_LEAK_RE, "");
+            if (next !== node.textContent) {
+                node.textContent = next;
+                textChanged = true;
+            }
+        };
+        span.childNodes.forEach(cleanText);
+        cleanText(span.nextSibling);
+        return textChanged;
     };
 
     const refreshDocRefs = async () => {
-        const spans = collectPendingDocRefs();
-        if (!spans.length) {
+        const spans = collectDocRefSpans();
+        if (!spans.length && !docRefPainted.size) {
             return;
         }
+        docRefCleaning = true;
+        const dirtyHosts = new Set();
+        try {
+            for (const span of spans) {
+                if (stripDocRefPollution(span)) {
+                    const host = span.closest(".protyle-wysiwyg");
+                    if (host) {
+                        dirtyHosts.add(host);
+                    }
+                }
+            }
+            dirtyHosts.forEach((host) => {
+                host.dispatchEvent(new InputEvent("input", {bubbles: true, cancelable: true}));
+            });
+        } finally {
+            requestAnimationFrame(() => {
+                docRefCleaning = false;
+            });
+        }
+        let sheetDirty = false;
         const needApi = [];
         for (const span of spans) {
             const id = span.getAttribute("data-id");
@@ -1227,29 +1444,35 @@
                 }
             }
             if (meta) {
-                paintDocRef(span, meta);
+                if (rememberDocRef(id, meta)) {
+                    sheetDirty = true;
+                }
             } else {
-                needApi.push(span);
+                needApi.push(id);
             }
+        }
+        if (sheetDirty) {
+            renderDocRefSheet();
         }
         if (!needApi.length) {
             return;
         }
-        const ids = [...new Set(needApi.map((span) => span.getAttribute("data-id")))];
+        const ids = [...new Set(needApi)];
         await Promise.all(ids.map((id) => loadDocRefMeta(id)));
-        for (const span of needApi) {
-            if (!span.isConnected) {
-                continue;
+        let afterDirty = false;
+        for (const id of ids) {
+            const meta = docRefCache.get(id);
+            if (meta && rememberDocRef(id, meta)) {
+                afterDirty = true;
             }
-            const meta = docRefCache.get(span.getAttribute("data-id"));
-            if (meta) {
-                paintDocRef(span, meta);
-            }
+        }
+        if (afterDirty) {
+            renderDocRefSheet();
         }
     };
 
     const scheduleDocRefs = () => {
-        if (docRefTimer) {
+        if (docRefCleaning || docRefTimer) {
             return;
         }
         docRefTimer = requestAnimationFrame(() => {
@@ -1281,20 +1504,21 @@
             cancelAnimationFrame(docRefTimer);
             docRefTimer = 0;
         }
-        document.querySelectorAll(".starter-doc-ref, .starter-doc-ref--skip").forEach((el) => {
-            el.classList.remove(
-                "starter-doc-ref",
-                "starter-doc-ref--skip",
-                "starter-doc-ref--icon",
-                "starter-doc-ref--img"
-            );
-            if (el instanceof HTMLElement) {
-                el.style.removeProperty("--starter-doc-ref-glyph");
-                el.style.removeProperty("--starter-doc-ref-img");
+        document.getElementById(DOC_REF_STYLE_ID)?.remove();
+        document.querySelectorAll(DOC_REF_SEL).forEach((el) => {
+            if (!(el instanceof HTMLElement)) {
+                return;
+            }
+            el.classList.remove(...DOC_REF_CLASSES);
+            el.style.removeProperty("--starter-doc-ref-glyph");
+            el.style.removeProperty("--starter-doc-ref-img");
+            if (el.getAttribute("style") === "") {
+                el.removeAttribute("style");
             }
         });
         docRefCache.clear();
         docRefInflight.clear();
+        docRefPainted.clear();
         docRefStarted = false;
     };
 
@@ -1306,6 +1530,13 @@
         } else {
             stopDocRefs();
         }
+    };
+
+    applyStyleFeatures = () => {
+        const root = document.documentElement;
+        root.classList.toggle("starter-plain-table-head", config.plainTableHead !== false);
+        root.classList.add("starter-block-line-height");
+        root.style.setProperty("--starter-block-line-height", String(config.blockLineHeight));
     };
 
     const applyTopbarHeight = () => {
@@ -1336,6 +1567,7 @@
         startOutlineFollow();
         startPathBreadcrumb();
         applyDocRefFeature();
+        applyStyleFeatures();
         const okDocks = mountAllDocks();
         const okToggles = mountToggles();
         const okMenu = bindPluginsMenu();
@@ -1366,7 +1598,12 @@
         stopTopbarHeight();
         stopOutlineFollow();
         stopPathBreadcrumb();
-        document.documentElement.classList.remove("starter-custom-doc-ref");
+        document.documentElement.classList.remove(
+            "starter-custom-doc-ref",
+            "starter-plain-table-head",
+            "starter-block-line-height"
+        );
+        document.documentElement.style.removeProperty("--starter-block-line-height");
         stopDocRefs();
         unbindPluginsMenu();
         closeSettingsDialog();

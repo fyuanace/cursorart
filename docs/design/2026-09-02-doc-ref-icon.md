@@ -28,6 +28,7 @@ tags: [typography, block-ref, document]
 | 2026-09-02 | 下划线与图标同一时刻出现，避免先满宽再让出图标造成的滑动感 |
 | 2026-09-02 | 修正未就绪规则误盖住已就绪下划线 |
 | 2026-09-02 | 设置「样式 → 链接样式」可关闭自定义引用；关则卸标并走官方样式 |
+| 2026-09-02 | 图标改由 `#starterDocRefStyle` 按 `data-id` 注入；禁止写 span.style，避免回车把 IAL 存进正文 |
 
 ## 背景信息
 
@@ -38,12 +39,12 @@ tags: [typography, block-ref, document]
 - 用 `/api/block/getBlockInfo` 判断 `rootID === id`，是则视为文档引用
 - 图标优先文档 IAL `rootIcon`（emoji 或 `/emojis/` 自定义图）；未设则用设置里的默认文档图标（`local-images.file`）
 - 文字色用 `var(--b3-theme-on-background)`；下划线用浅色 `var(--b3-border-color)`，且 `background-clip: content-box`：图标在 padding 里，线只出现在文字 content 下
-- 未打 skip 的引用先只改正文色+加粗；图标与下划线等 JS 打上 `--icon/--img` 后同时出现
-- 图标：文档树已有该项则同步画出；否则 `getBlockInfo` 返回后马上补。不再用 idle 推迟
-- 标题/段落引用打 `starter-doc-ref--skip` 后恢复官方紫色、无下划线
-- 只给 span 加 `starter-doc-ref` 与 CSS 变量，用 `::before` 绘制；不往可编辑文本里插节点，避免存进 `.sy`
-- 标题/段落等非文档引用打 `starter-doc-ref--skip`，不再请求
-- 结果按 id 缓存；编辑器 DOM 变化与切文档时补打标
+- 未判定的引用先只改正文色+加粗；确认是文档后由 `#starterDocRefStyle` 按官方 `data-id` 画图标与下划线
+- 图标：文档树已有该项则同步写入样式表；否则 `getBlockInfo` 返回后马上补。不再用 idle 推迟
+- 标题/段落引用在样式表里按 id 复位为官方紫色、无下划线
+- 不改 span 的 `class` / `style` / 正文；`::before` 只活在 document 样式表里，避免回车时 Lute 把 `{: style=...}` 写进块
+- 打开文档时清掉旧版残留的 `--starter-doc-ref-*` 行内样式，以及已漏进正文的 `{: style="--starter-doc-ref-…"}`
+- 结果按 id 缓存；编辑器 DOM 变化与切文档时补规则
 
 ## 其他模块引用约束
 
@@ -51,6 +52,7 @@ tags: [typography, block-ref, document]
 - `customDocRefStyle === false` 时不要打自定义类，也不要给 `html` 加 `starter-custom-doc-ref`
 - 不要给所有 `block-ref` 一律加文档图标
 - 不要修改 `av__celltext` 或代码块内的引用 span 正文
+- 不要给可编辑 `block-ref` 写 `style` 或自定义 `data-*`（回车会序列化成 IAL）
 
 ## 工程师测试验收方法
 
@@ -58,6 +60,7 @@ tags: [typography, block-ref, document]
 2. 引用某**标题**或段落：无文档图标、不加粗、无下划线，仍为官方紫色
 3. 点击文档引用仍能跳转；重新加载窗口后图标仍在
 4. 切换主题离开后，引用恢复官方样式，文档内容未被写入图标字符
+5. 在文档引用所在行按回车：新段落正常，引用旁不应出现 `{: style="--starter-doc-ref-glyph:…"}`
 
 ## 其他说明
 

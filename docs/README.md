@@ -23,7 +23,7 @@
 - 默认层：亮色 `daylight/theme.css`；暗色 `midnight/theme.css`（思源按模式自动加载）
 - 覆盖层：`theme.css` + `theme.js`（侧栏顶横条 dock；顶栏左右侧栏显隐；主题设置隐藏 dock 工具；大纲跟随正文位置；大纲隐藏文档名与 H1–H6 标记、一级标题加粗；面包屑为文档路径；文档引用显示图标并加粗；文件树最近打开与收藏）
 - 分区线颜色：`var(--b3-border-color)`
-- 面板底色：左侧栏 / 顶栏用 chrome（亮 `#f8f8f8` / 暗 `#191a1b`）；右侧栏与编辑区同色（亮 `#ffffff` / 暗 `#1e1e1e`）
+- 面板底色：左侧栏 / 顶栏用 chrome（亮 `#f8f8f8` / 暗 `#202020`）；右侧栏与编辑区同色（亮 `#ffffff` / 暗 `#191919`）
 - 自有令牌：`--starter-topbar-height`、`--starter-block-line-height`
 - 设置入口：顶栏 `#barPlugins` 菜单 →「cursor极简 设置」（侧栏工具显隐；样式里的隐藏笔记本、隐藏 Tab 栏新建文档/页签切换、最近打开与收藏的显示开关和条数、链接样式、表格表头不加粗、块行间距；见 [design/2026-08-04-theme-settings.md](design/2026-08-04-theme-settings.md)）
 - 文件夹名为 `cursorart`；`theme.json` 的 `name` 必须与文件夹名一致（思源 3.8+ 集市校验）；界面显示名为 cursor极简（`displayName`）

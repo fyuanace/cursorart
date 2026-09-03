@@ -32,8 +32,8 @@
 }
 
 :root[data-theme-mode="dark"] {
-    --b3-theme-background: #191a1b;
-    --b3-body-background: #191a1b;
+    --b3-theme-background: #202020;
+    --b3-body-background: #202020;
 }
 
 /* 取消官方 body 径向渐变，底色跟当前模式的 --b3-theme-background */
@@ -216,7 +216,7 @@ html.starter-hide-tab-new.starter-hide-tab-more #layouts .layout__center .layout
 }
 
 :root[data-theme-mode="dark"] #layouts .layout__center .layout-tab-bar .item--focus:not(.item--readonly) {
-    background-color: #1e1e1e;
+    background-color: #191919;
 }
 
 #layouts .layout-tab-bar .item:hover:not(.item--focus):not(.item--readonly) {
@@ -473,18 +473,19 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
 }
 
 :root[data-theme-mode="dark"] .layout__center .protyle,
-:root[data-theme-mode="dark"] .layout__center .protyle-breadcrumb {
-    background-color: #1e1e1e;
+:root[data-theme-mode="dark"] .layout__center .protyle-breadcrumb,
+:root[data-theme-mode="dark"] .layout__center .layout-tab-container {
+    background-color: #191919;
 }
 
 :root[data-theme-mode="dark"] .layout__dockr {
-    --b3-theme-background: #1e1e1e;
-    background-color: #1e1e1e;
+    --b3-theme-background: #191919;
+    background-color: #191919;
 }
 
 :root[data-theme-mode="dark"] .layout__dockr .sy__outline,
 :root[data-theme-mode="dark"] .layout__dockr .sy__outline .block__icons {
-    background-color: #1e1e1e;
+    background-color: #191919;
 }
 
 /* 大纲：不显示文档名与 H1/H2 标记，一级标题加粗 */

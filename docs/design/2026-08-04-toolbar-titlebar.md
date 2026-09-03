@@ -27,6 +27,7 @@ tags: [layout, toolbar, regions, daylight]
 | 2026-08-05 | `--starter-topbar-height` 改为 42px，`#toolbar` / 横线 / 侧栏顶边与官方 Tab 行对齐 |
 | 2026-09-01 | 亮色右侧栏（`.layout__dockr`）底色改为与编辑区相同的 `#ffffff`；左侧栏与顶栏仍为 `#f8f8f8` |
 | 2026-09-01 | 暗色右侧栏与编辑区同为 midnight 纸色 `#1e1e1e`；左侧栏与顶栏仍为 `#191a1b` |
+| 2026-09-03 | 暗色改为：左侧栏与顶栏 `#202020`，中间编辑区与右侧栏 `#191919` |
 | 2026-09-01 | 中栏文档 Tab 改为 VS Code 式：直角贴条、激活纸色、未激活 chrome、竖线分隔、取消斜体与上下留白 |
 | 2026-09-01 | 激活 Tab 盖住底部分割线，与下方面包屑/编辑区连成一块；未激活与空白处仍保留 1px 横线 |
 | 2026-09-01 | 隐藏顶栏时整条标题栏视觉高度 50px：Tab / 工具按钮 / 窗口控件同一行；CSS 高度按思源界面缩放反算，量到的仍是 50 |
@@ -49,7 +50,7 @@ tags: [layout, toolbar, regions, daylight]
 | ① | `#toolbar` | 高度 `--starter-topbar-height`（截图 55 物理像素，CSS=`55/dpr`）；`body::after` 画全宽 1px 底线；勿抬 `z-index`（否则挡 Tab 点击）。同一行：中间文档 Tab 铺满行高；左右普通工具保持官方小按钮并垂直居中；窗口最小/最大/关闭铺满行高并用 flex 居中图标 |
 | ② | `#dockLeft`、`.layout__dockl` | `margin-top` / 高度与 ① 对齐 |
 | ③ | 中栏 `.layout-tab-bar` + `.layout-tab-container` | Tab 行高与 ① 相同（截图 55 物理像素）；直角贴条；激活为编辑区纸色，未激活为 chrome；Tab 间 1px 竖线；取消斜体；只读条（+ / 空白）不铺底；底线画在 Tab 条背景上，激活项纸色盖住该 1px |
-| ④ | `#dockRight`、`.layout__dockr` | 同 ②；底色与编辑区一致（亮 `#ffffff` / 暗 `#1e1e1e`） |
+| ④ | `#dockRight`、`.layout__dockr` | 同 ②；底色与编辑区一致（亮 `#ffffff` / 暗 `#191919`） |
 
 竖向：`.layout__resize--lr::after` 等，颜色 `var(--b3-border-color)`（daylight）。
 
@@ -107,7 +108,7 @@ tags: [layout, toolbar, regions, daylight]
 3b. 中间 Tab 铺满该行高度；左右插件/工作区等小按钮垂直居中且明显矮于 Tab；最小化/最大化/关闭铺满行高且图标垂直居中
 4. 文档 Tab 为 VS Code 式直角条：激活与编辑区同色、未激活与顶栏同灰、无斜体；仍可点击切换、关闭；只读条中间空白无整条悬浮底
 5. 左栏 / 中栏 / 右栏之间竖线清晰；左栏、右栏顶边与顶栏底线对齐
-5a. 右侧大纲等面板底色应与中间编辑区一致：亮色均为 `#ffffff`，暗色均为 `#1e1e1e`；左侧文档树仍为 chrome（亮 `#f8f8f8` / 暗 `#191a1b`）
+5a. 右侧大纲等面板底色应与中间编辑区一致：亮色均为 `#ffffff`，暗色均为 `#191919`；左侧文档树与顶栏为 chrome（亮 `#f8f8f8` / 暗 `#202020`）
 6. 点顶栏左右面板图标：折叠收起当前面板；再点应恢复隐藏前选中的那一项（如标签不会变成文档树）；按钮本身无按下高亮
 7. 关闭「隐藏顶栏」后，横线仍在 `#toolbar` 底边，高度约 28px
 

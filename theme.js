@@ -1303,7 +1303,9 @@
             window.openFileByURL(`siyuan://blocks/${id}`);
             return;
         }
-        const treeItem = document.querySelector(`#layouts .sy__file .b3-list-item[data-node-id="${id}"]`);
+        const treeItem = document.querySelector(
+            `#layouts .sy__file ul[data-url] .b3-list-item[data-node-id="${id}"]`
+        );
         if (treeItem) {
             treeItem.click();
             return;
@@ -2075,6 +2077,107 @@
         }
     };
 
+    let listNavSource = "";
+    let listNavId = "";
+    let listNavGuardUntil = 0;
+    let treeFocusObs = null;
+    let treeFocusHost = null;
+    const snapshotFileScroll = () =>
+        [...document.querySelectorAll(`#layouts .sy__file .${SCROLL_CLASS}`)].map((el) => el.scrollTop);
+    const restoreFileScroll = (tops) => {
+        document.querySelectorAll(`#layouts .sy__file .${SCROLL_CLASS}`).forEach((el, i) => {
+            if (typeof tops[i] === "number") {
+                el.scrollTop = tops[i];
+            }
+        });
+    };
+    const clearOfficialTreeFocus = () => {
+        document
+            .querySelectorAll(`#layouts .sy__file ul[data-url] .b3-list-item--focus`)
+            .forEach((el) => el.classList.remove("b3-list-item--focus"));
+    };
+    const sidebarCurrentId = (source) =>
+        listNavSource === source ? listNavId : "";
+    const unpinSidebarLists = () => {
+        listNavSource = "";
+        listNavId = "";
+        paintSidebarCurrent();
+    };
+    const paintSidebarCurrent = () => {
+        const favId = sidebarCurrentId("fav");
+        const recentId = sidebarCurrentId("recent");
+        document.querySelectorAll("#layouts .sy__file [data-starter-fav-doc]").forEach((li) => {
+            const on = !!(favId && li.getAttribute("data-node-id") === favId);
+            li.classList.toggle("starter-fav-docs__item--current", on);
+            li.classList.toggle("b3-list-item--focus", on);
+        });
+        document.querySelectorAll("#layouts .sy__file [data-starter-recent-doc]").forEach((li) => {
+            const on = !!(recentId && li.getAttribute("data-node-id") === recentId);
+            li.classList.toggle("starter-recent-docs__item--current", on);
+            li.classList.toggle("b3-list-item--focus", on);
+        });
+    };
+    const holdSidebarNav = (tops) => {
+        const source = listNavSource;
+        const id = listNavId;
+        const run = () => {
+            if (listNavSource !== source || listNavId !== id) {
+                return;
+            }
+            restoreFileScroll(tops);
+            clearOfficialTreeFocus();
+            paintSidebarCurrent();
+        };
+        run();
+        requestAnimationFrame(run);
+        [40, 120, 280, 500].forEach((ms) => setTimeout(run, ms));
+    };
+    const pinSidebarNav = (source, id) => {
+        if (!id) {
+            return;
+        }
+        listNavSource = source;
+        listNavId = id;
+        listNavGuardUntil = Date.now() + 1000;
+        paintSidebarCurrent();
+        clearOfficialTreeFocus();
+        const tops = snapshotFileScroll();
+        openDocById(id);
+        holdSidebarNav(tops);
+    };
+    const releaseSidebarNavIfStale = (activeId) => {
+        if (listNavSource !== "fav" && listNavSource !== "recent") {
+            return;
+        }
+        if (Date.now() < listNavGuardUntil) {
+            return;
+        }
+        if (activeId && activeId !== listNavId) {
+            unpinSidebarLists();
+        }
+    };
+    const startTreeFocusGuard = () => {
+        const host = document.querySelector("#layouts .sy__file") || document.body;
+        if (treeFocusObs && treeFocusHost === host) {
+            return;
+        }
+        treeFocusObs?.disconnect();
+        treeFocusHost = host;
+        treeFocusObs = new MutationObserver(() => {
+            if (listNavSource === "fav" || listNavSource === "recent") {
+                clearOfficialTreeFocus();
+            }
+        });
+        treeFocusObs.observe(host, {subtree: true, attributes: true, attributeFilter: ["class"]});
+    };
+    const stopTreeFocusGuard = () => {
+        treeFocusObs?.disconnect();
+        treeFocusObs = null;
+        treeFocusHost = null;
+        listNavSource = "";
+        listNavId = "";
+    };
+
     const snapshotDoc = (id, hintEl) => {
         const titleEl =
             hintEl?.querySelector?.(".protyle-title") ||
@@ -2125,7 +2228,7 @@
         }
         e.preventDefault();
         e.stopPropagation();
-        openDocById(item.getAttribute("data-node-id"));
+        pinSidebarNav("recent", item.getAttribute("data-node-id"));
     };
 
     const ensureRecentHost = (fileEl) => {
@@ -2165,7 +2268,7 @@
             removeRecentHosts();
             return;
         }
-        const currentId = getActiveDocId();
+        const currentId = sidebarCurrentId("recent");
         const shown = items.slice(0, max);
         const key = `${max}|${recentCollapsed ? 1 : 0}|${currentId}|${shown
             .map((d) => `${d.id || ""}\t${d.title || ""}\t${d.icon || ""}`)
@@ -2192,6 +2295,7 @@
                         "starter-recent-docs__item--current",
                         li.getAttribute("data-node-id") === currentId
                     );
+                    li.classList.toggle("b3-list-item--focus", li.getAttribute("data-node-id") === currentId);
                 });
                 return;
             }
@@ -2199,7 +2303,7 @@
                 .map((item) => {
                     const id = item.id || "";
                     const title = item.title || "无标题";
-                    const current = id && id === currentId ? " starter-recent-docs__item--current" : "";
+                    const current = id && id === currentId ? " starter-recent-docs__item--current b3-list-item--focus" : "";
                     return `<li class="b3-list-item${current}" data-node-id="${escapeHtml(id)}" data-starter-recent-doc>
   ${TREE_TOGGLE_SPACE}
   <span class="b3-list-item__icon">${recentIconInner(item.icon)}</span>
@@ -2347,14 +2451,26 @@
         if (!from) {
             return;
         }
-        if (from.closest?.(".b3-list-item__toggle, .b3-list-item__action")) {
+        if (from.closest?.(".b3-list-item__action")) {
+            return;
+        }
+        const treeToggle = from.closest?.(".b3-list-item__toggle");
+        if (
+            treeToggle &&
+            !from.closest?.("[data-starter-recent-doc], [data-starter-fav-doc]")
+        ) {
             return;
         }
         const docLi = from.closest?.(
-            "[data-starter-recent-doc], [data-starter-fav-doc], #layouts .sy__file li[data-type='navigation-file'][data-node-id]"
+            "[data-starter-recent-doc], [data-starter-fav-doc], #layouts .sy__file ul[data-url] .b3-list-item"
         );
         if (docLi) {
             const id = docLi.getAttribute("data-node-id");
+            if (docLi.hasAttribute("data-starter-fav-doc") || docLi.hasAttribute("data-starter-recent-doc")) {
+                /* 打开由列表 click 处理；此处只记最近 */
+            } else {
+                unpinSidebarLists();
+            }
             if (id) {
                 scheduleRecord(id, docLi);
             }
@@ -2362,6 +2478,7 @@
         }
         const tab = from.closest?.("#layouts .layout-tab-bar .item:not(.item--readonly)");
         if (tab) {
+            unpinSidebarLists();
             scheduleRecord(tabRootId(tab), null);
         }
     };
@@ -2427,6 +2544,7 @@
             return;
         }
         recentStarted = true;
+        startTreeFocusGuard();
         document.addEventListener("loaded-protyle-static", onProtyleRecentDocs);
         document.addEventListener("switch-protyle", onProtyleRecentDocs);
         document.addEventListener("pointerdown", onRecentOpenPointer, true);
@@ -2444,6 +2562,7 @@
                 return;
             }
             const id = getActiveDocId();
+            releaseSidebarNavIfStale(id);
             if (id && id !== config.recentDocs[0]?.id) {
                 scheduleRecord(id, null);
             }
@@ -2456,6 +2575,7 @@
                         n.nodeType === 1 &&
                         (n.classList?.contains("sy__file") || n.querySelector?.(".sy__file"))
                     ) {
+                        startTreeFocusGuard();
                         scheduleRecentDocs(false);
                         return;
                     }
@@ -2558,7 +2678,7 @@
         }
         e.preventDefault();
         e.stopPropagation();
-        openDocById(item.getAttribute("data-node-id"));
+        pinSidebarNav("fav", item.getAttribute("data-node-id"));
     };
 
     const ensureFavHost = (fileEl) => {
@@ -2600,7 +2720,7 @@
             removeFavHosts();
             return;
         }
-        const currentId = getActiveDocId();
+        const currentId = sidebarCurrentId("fav");
         const hidden = Math.max(0, items.length - max);
         if (hidden === 0) {
             favListExpanded = false;
@@ -2627,14 +2747,16 @@
             }
             if (key === favRenderKey && list.childElementCount) {
                 list.querySelectorAll("[data-starter-fav-doc]").forEach((li) => {
-                    li.classList.toggle("starter-fav-docs__item--current", li.getAttribute("data-node-id") === currentId);
+                    const on = li.getAttribute("data-node-id") === currentId;
+                    li.classList.toggle("starter-fav-docs__item--current", on);
+                    li.classList.toggle("b3-list-item--focus", on);
                 });
                 return;
             }
             const rows = shown.map((item) => {
                 const id = item.id || "";
                 const title = item.title || "无标题";
-                const current = id && id === currentId ? " starter-fav-docs__item--current" : "";
+                const current = id && id === currentId ? " starter-fav-docs__item--current b3-list-item--focus" : "";
                 return `<li class="b3-list-item b3-list-item--hide-action${current}" data-node-id="${escapeHtml(id)}" data-starter-fav-doc>
   ${TREE_TOGGLE_SPACE}
   <span class="b3-list-item__icon">${recentIconInner(item.icon)}</span>
@@ -2710,6 +2832,7 @@
             return;
         }
         favStarted = true;
+        startTreeFocusGuard();
         document.addEventListener("click", onFavBtnClick, true);
         document.addEventListener("loaded-protyle-static", syncFavButtons);
         document.addEventListener("switch-protyle", syncFavButtons);
@@ -2721,6 +2844,7 @@
                         n.nodeType === 1 &&
                         (n.classList?.contains("sy__file") || n.querySelector?.(".sy__file"))
                     ) {
+                        startTreeFocusGuard();
                         applyFavoriteDocs();
                         return;
                     }
@@ -2831,6 +2955,7 @@
         stopHideNotebooks();
         stopRecentDocs();
         stopFavoriteDocs();
+        stopTreeFocusGuard();
         stopDocRefs();
         unbindPluginsMenu();
         closeSettingsDialog();

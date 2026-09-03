@@ -470,6 +470,71 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     font-weight: 700;
 }
 
+/* 文件树隐藏笔记本：文档作为第一级；按嵌套层立刻减一层缩进，避免展开后闪一下 */
+html.starter-hide-notebook .sy__file li[data-type="navigation-root"] {
+    display: none !important;
+}
+
+html.starter-hide-notebook .sy__file > ul.b3-list.fn__flex-column {
+    display: none !important;
+}
+
+html.starter-hide-notebook .sy__file ul[data-url] > ul > li[data-type="navigation-file"] {
+    --file-toggle-width: 18px !important;
+}
+
+html.starter-hide-notebook .sy__file ul[data-url] > ul > li[data-type="navigation-file"] > .b3-list-item__toggle {
+    padding-left: 0 !important;
+}
+
+html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > li[data-type="navigation-file"] {
+    --file-toggle-width: 36px !important;
+}
+
+html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > li[data-type="navigation-file"] > .b3-list-item__toggle {
+    padding-left: 18px !important;
+}
+
+html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > ul > li[data-type="navigation-file"] {
+    --file-toggle-width: 54px !important;
+}
+
+html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > ul > li[data-type="navigation-file"] > .b3-list-item__toggle {
+    padding-left: 36px !important;
+}
+
+html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > ul > ul > li[data-type="navigation-file"] {
+    --file-toggle-width: 72px !important;
+}
+
+html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > ul > ul > li[data-type="navigation-file"] > .b3-list-item__toggle {
+    padding-left: 54px !important;
+}
+
+html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > ul > ul > ul > li[data-type="navigation-file"] {
+    --file-toggle-width: 90px !important;
+}
+
+html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > ul > ul > ul > li[data-type="navigation-file"] > .b3-list-item__toggle {
+    padding-left: 72px !important;
+}
+
+html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > ul > ul > ul > ul > li[data-type="navigation-file"] {
+    --file-toggle-width: 108px !important;
+}
+
+html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > ul > ul > ul > ul > li[data-type="navigation-file"] > .b3-list-item__toggle {
+    padding-left: 90px !important;
+}
+
+html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > ul > ul > ul > ul > ul > li[data-type="navigation-file"] {
+    --file-toggle-width: 126px !important;
+}
+
+html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > ul > ul > ul > ul > ul > li[data-type="navigation-file"] > .b3-list-item__toggle {
+    padding-left: 108px !important;
+}
+
 /* 行内代码文字色（Notion #d6716a）；不含代码块 */
 .b3-typography :not(pre) > code,
 .protyle-wysiwyg [data-node-id] span[data-type~="code"] {

@@ -51,15 +51,17 @@
         return Math.min(2.6, Math.max(1.2, Math.round(x * 20) / 20));
     };
 
-    /** @type {{ hiddenDockTypes: string[], customDocRefStyle: boolean, plainTableHead: boolean, blockLineHeight: number }} */
+    /** @type {{ hiddenDockTypes: string[], customDocRefStyle: boolean, plainTableHead: boolean, blockLineHeight: number, hideNotebooks: boolean }} */
     let config = {
         hiddenDockTypes: [],
         customDocRefStyle: true,
         plainTableHead: true,
         blockLineHeight: DEFAULT_BLOCK_LH,
+        hideNotebooks: false,
     };
     let applyDocRefFeature = () => {};
     let applyStyleFeatures = () => {};
+    let applyHideNotebooks = () => {};
 
     /** 每侧记住上一次选中的 dock type（展开时用） */
     const lastType = {
@@ -74,6 +76,7 @@
         customDocRefStyle: parsed?.customDocRefStyle !== false,
         plainTableHead: parsed?.plainTableHead !== false,
         blockLineHeight: clampBlockLh(parsed?.blockLineHeight ?? DEFAULT_BLOCK_LH),
+        hideNotebooks: parsed?.hideNotebooks === true,
     });
 
     const readLegacyLocal = () => {
@@ -342,6 +345,7 @@
 
         const docRefChecked = config.customDocRefStyle !== false ? " checked" : "";
         const tableHeadChecked = config.plainTableHead !== false ? " checked" : "";
+        const hideNbChecked = config.hideNotebooks === true ? " checked" : "";
         const blockLh = clampBlockLh(config.blockLineHeight);
 
         const dialog = document.createElement("div");
@@ -363,6 +367,13 @@
           侧栏工具显示
           <div class="b3-label__text">开关打开 = 显示该工具图标；关闭 = 隐藏（仅本主题生效）</div>
         </div>
+        <label class="fn__flex b3-label config-item">
+          <div class="fn__flex-1">
+            隐藏笔记本
+            <div class="b3-label__text">文件树不显示笔记本名称，其中文档作为第一级列出</div>
+          </div>
+          <input class="b3-switch fn__flex-center" type="checkbox" data-starter-hide-notebook${hideNbChecked}>
+        </label>
         ${rows}
       </div>
       <div data-starter-pane="style">
@@ -408,6 +419,7 @@
         const onClose = (revert) => {
             if (revert) {
                 applyStyleFeatures();
+                applyHideNotebooks();
             }
             dialog.removeEventListener("click", onClick);
             document.removeEventListener("keydown", onKey, true);
@@ -445,17 +457,20 @@
                 });
                 const customDocRefStyle = !!dialog.querySelector("[data-starter-doc-ref-style]")?.checked;
                 const plainTableHead = !!dialog.querySelector("[data-starter-plain-table-head]")?.checked;
+                const hideNotebooks = !!dialog.querySelector("[data-starter-hide-notebook]")?.checked;
                 const blockLineHeight = clampBlockLh(dialog.querySelector("[data-starter-block-lh]")?.value);
                 closeIfActiveHidden(hidden);
                 saveConfigToFile({
                     hiddenDockTypes: hidden,
                     customDocRefStyle,
                     plainTableHead,
+                    hideNotebooks,
                     blockLineHeight,
                 }).then((ok) => {
                     applyHiddenDockTypes();
                     applyDocRefFeature();
                     applyStyleFeatures();
+                    applyHideNotebooks();
                     onClose();
                     if (!ok && window.siyuan?.languages) {
                         /* 失败已 console.warn；仍关闭对话框以免卡死 */
@@ -484,6 +499,15 @@
         });
         dialog.querySelector("[data-starter-plain-table-head]")?.addEventListener("change", (e) => {
             document.documentElement.classList.toggle("starter-plain-table-head", !!e.target.checked);
+        });
+        dialog.querySelector("[data-starter-hide-notebook]")?.addEventListener("change", (e) => {
+            const on = !!e.target.checked;
+            document.documentElement.classList.toggle("starter-hide-notebook", on);
+            if (on) {
+                startHideNotebooks();
+            } else {
+                stopHideNotebooks();
+            }
         });
     };
 
@@ -1659,6 +1683,81 @@
         }
     };
 
+    const FILE_TREE_SEL = "#layouts .sy__file";
+    let fileTreeObs = null;
+    let fileTreeRaf = 0;
+
+    const expandFileTreeNotebooks = () => {
+        document.querySelectorAll(`${FILE_TREE_SEL} ul[data-url] > li[data-type="navigation-root"]`).forEach((li) => {
+            const arrow = li.querySelector(":scope > .b3-list-item__toggle .b3-list-item__arrow");
+            if (arrow && !arrow.classList.contains("b3-list-item__arrow--open")) {
+                li.querySelector(":scope > .b3-list-item__toggle")?.click();
+            }
+        });
+    };
+
+    const refreshHideNotebooks = () => {
+        if (!document.documentElement.classList.contains("starter-hide-notebook")) {
+            return;
+        }
+        expandFileTreeNotebooks();
+    };
+
+    const scheduleHideNotebooks = () => {
+        if (fileTreeRaf) {
+            return;
+        }
+        fileTreeRaf = requestAnimationFrame(() => {
+            fileTreeRaf = 0;
+            refreshHideNotebooks();
+        });
+    };
+
+    const startHideNotebooks = () => {
+        if (!fileTreeObs) {
+            const host = document.querySelector("#layouts") || document.body;
+            fileTreeObs = new MutationObserver((mutations) => {
+                for (const m of mutations) {
+                    const t = m.target;
+                    if (t instanceof Element && t.closest(".sy__file")) {
+                        scheduleHideNotebooks();
+                        return;
+                    }
+                    for (const n of m.addedNodes) {
+                        if (
+                            n.nodeType === 1 &&
+                            (n.classList?.contains("sy__file") || n.querySelector?.(".sy__file"))
+                        ) {
+                            scheduleHideNotebooks();
+                            return;
+                        }
+                    }
+                }
+            });
+            fileTreeObs.observe(host, {childList: true, subtree: true});
+        }
+        expandFileTreeNotebooks();
+    };
+
+    const stopHideNotebooks = () => {
+        fileTreeObs?.disconnect();
+        fileTreeObs = null;
+        if (fileTreeRaf) {
+            cancelAnimationFrame(fileTreeRaf);
+            fileTreeRaf = 0;
+        }
+    };
+
+    applyHideNotebooks = () => {
+        const on = config.hideNotebooks === true;
+        document.documentElement.classList.toggle("starter-hide-notebook", on);
+        if (on) {
+            startHideNotebooks();
+        } else {
+            stopHideNotebooks();
+        }
+    };
+
     applyStyleFeatures = () => {
         const root = document.documentElement;
         root.classList.toggle("starter-plain-table-head", config.plainTableHead !== false);
@@ -1695,6 +1794,7 @@
         startPathBreadcrumb();
         applyDocRefFeature();
         applyStyleFeatures();
+        applyHideNotebooks();
         const okDocks = mountAllDocks();
         const okToggles = mountToggles();
         const okMenu = bindPluginsMenu();
@@ -1728,9 +1828,11 @@
         document.documentElement.classList.remove(
             "starter-custom-doc-ref",
             "starter-plain-table-head",
-            "starter-block-line-height"
+            "starter-block-line-height",
+            "starter-hide-notebook"
         );
         document.documentElement.style.removeProperty("--starter-block-line-height");
+        stopHideNotebooks();
         stopDocRefs();
         unbindPluginsMenu();
         closeSettingsDialog();

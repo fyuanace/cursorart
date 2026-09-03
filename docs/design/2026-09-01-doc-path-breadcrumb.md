@@ -8,6 +8,7 @@ summary: >
   编辑器面包屑改为文档路径（笔记本/文件夹/文档），不再显示页内标题/块层级。
 related:
   - design/2026-08-04-toolbar-titlebar.md
+  - design/2026-09-03-file-tree-favorites.md
 tags: [breadcrumb, path, theme.js]
 ---
 
@@ -23,6 +24,7 @@ tags: [breadcrumb, path, theme.js]
 | 2026-09-01 | 省略策略：≤3 级完整且不撑开空隙；>3 级时第一级+末尾两级优先完整，中间先省略；标题仍放不下则该项末尾省略 |
 | 2026-09-01 | 路径条强制单行：nowrap + 固定 22px 高，过长只省略不换行 |
 | 2026-09-01 | 取消 22px 锁高：路径条与官方面包屑行、右侧按钮同一行垂直居中；字号回到官方 14px |
+| 2026-09-03 | 路径条右侧、「文档」按钮前增加收藏按钮 |
 
 ## 背景信息
 
@@ -38,6 +40,7 @@ tags: [breadcrumb, path, theme.js]
 - 悬浮用 `var(--b3-list-hover)`；每一级（含笔记本）点击 `openFileByURL`
 - 过长省略：≤3 级不省略、不 `flex-grow`；>3 级时第一级与末尾两级 `--keep`，中间 `--mid` 先收缩出 `...`；单项标题过长则 `text-overflow: ellipsis` 加在标题末尾
 - 路径条不锁高度：跟官方 `.protyle-breadcrumb` 同行、`align-items: center`，与右侧锁定/文档/更多按钮垂直对齐；字号 14px
+- 收藏五角星在面包屑右侧工具栏最左、定位按钮左侧（见 [design/2026-09-03-file-tree-favorites.md](2026-09-03-file-tree-favorites.md)）
 - 按文档根 ID 缓存；新编辑器 / 切文档靠 `loaded-protyle-static`、`switch-protyle`、标题 `data-node-id` 与面包屑 DOM 出现时刷新
 - 右侧锁定、文档菜单、更多按钮不动
 - 当前文档项点击不跳转；卸载主题时移除路径条，官方条随 CSS 卸载重新显示

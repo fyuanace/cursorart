@@ -1,0 +1,58 @@
+---
+type: design-change
+project: cursor-minimal
+module: file-tree
+date: 2026-09-03
+status: implemented
+summary: >
+  文件树顶部增加「最近打开」区块；设置可开关显示，并配置最多显示条数。
+related:
+  - design/2026-08-04-theme-settings.md
+  - design/2026-09-03-file-tree-hide-notebook.md
+tags: [file-tree, recent-docs, settings]
+---
+
+# 文件树最近打开
+
+## 变更记录
+
+| 时间 | 说明 |
+|------|------|
+| 2026-09-03 | 文件树顶部列出最近打开文档；侧栏滑杆配置条数（0–32，缺省 8） |
+| 2026-09-03 | 与收藏、官方树共用同一滚动区，自身不再出滚动条 |
+| 2026-09-03 | 改为主题自己记最近打开，打开文档即更新，只保留设置条数 |
+| 2026-09-03 | 不再只听 document 上的切换事件（主题收不到）；改为插件总线 + 文件树/页签点击 + 编辑区观察 + 轮询 |
+| 2026-09-03 | 增加 `showRecentDocs` 显示开关；条数滑杆不再用 0 隐藏 |
+
+## 背景信息
+
+官方最近文档只在快捷键对话框里。用户希望在左侧文档树顶部固定看到最近打开的若干篇，并自己决定显示几条。
+
+## 当前方案
+
+- 配置 `showRecentDocs`（缺省 `true`）、`recentDocsMax`（缺省 `8`，范围 1–32）与 `recentDocs: { id, title, icon }[]`
+- 不调用 `/api/storage/getRecentDocs`；打开/切换文档时把当前文档插到最前，去重后只保留 `recentDocsMax` 条，写入主题 `config.json`；关闭显示只去掉文件树区块，仍继续记入
+- 记入不依赖 `document` 上的 `switch-protyle`（那是插件 eventBus，主题听不到）。实际来源：插件 `eventBus`、文件树文档项与中栏 Tab 的 pointerdown、编辑区标题/页签 DOM 变化、路径条刷新、以及当前文档 id 轮询；文件树重绘只刷新列表，不会取消一次已排队的记入
+- 区块插在官方树列表之外、同一滚动容器顶部，避免官方 `innerHTML` 刷新把列表冲掉，也不进入文件树键盘多选；自身不设滚动条
+- 点击条目走已有 `openDocById`；标题栏可折叠；当前正文对应项用列表悬停底色标出
+- 设置滑杆即时预览显示条数；保存时按新条数裁切已存列表；取消 / Esc / 点遮罩还原未保存条数
+
+## 其他模块引用约束
+
+- 只把区块放进 `#layouts .sy__file .starter-file-scroll`，不要写进官方树 `ul[data-url]`
+- 条目不要标 `data-type="navigation-file"` / `navigation-root`，以免套用隐藏笔记本的缩进规则
+- 不要改 `data/storage/recent-doc.json`，也不要读 `/api/storage/getRecentDocs`
+- 不要给本区块单独 overflow
+
+## 工程师测试验收方法
+
+1. 开启「加载主题 JS」，reload 后用文件树或顶栏 Tab 切换几篇文档，「最近打开」应按打开顺序更新，当前篇在最前；新文档应出现新条目
+2. 再打开已在列表中的文档，该项应立刻顶到第一
+3. 点击条目应打开对应文档
+4. 设置「样式」关闭「显示最近打开」：区块消失；再打开应恢复。拖动条数只改列出数量；取消后回到保存值
+5. 保存后重启，列表与条数仍按主题配置，不依赖官方最近文档对话框
+6. 展开/折叠文件树、隐藏笔记本开关，不应拆掉该区块或打乱其缩进
+
+## 其他说明
+
+无。

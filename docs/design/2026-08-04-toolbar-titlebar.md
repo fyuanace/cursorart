@@ -34,6 +34,7 @@ tags: [layout, toolbar, regions, daylight]
 | 2026-09-01 | 纠正：70 与 45 都不含路径条。45/30=1.5 为系统 150% DPI；标题栏按截图物理像素，CSS=目标/devicePixelRatio |
 | 2026-09-01 | 标题栏截图目标改为 55 物理像素 |
 | 2026-09-01 | Tab 条 `+` / 下拉垂直居中，且中间 `fn__flex-1` 空白重新拉开并作为窗口拖动区 |
+| 2026-09-03 | 设置可分别隐藏 Tab 条「+」与页签下拉，空白拖动区仍在 |
 
 ## 背景信息
 
@@ -67,6 +68,7 @@ tags: [layout, toolbar, regions, daylight]
 - `theme.js`：`--starter-topbar-height = 55 / devicePixelRatio`。150% DPI 时 CSS ≈ 36.67px，截图为 55
 - 路径条跟官方面包屑行高，不锁 22px，不计入标题栏 55
 - 同一行分工：Tab 铺满该行；普通 `.toolbar__item` 保持官方高度并垂直居中；`.toolbar__item--win/--close` 铺满行高
+- Tab 只读条上的「+」与页签下拉可在设置里分别隐藏（`hideTabNewDoc` / `hideTabSwitch`），中间空白仍作窗口拖动
 
 **顶栏侧栏开关（theme.js）**：
 

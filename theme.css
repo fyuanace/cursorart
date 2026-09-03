@@ -177,6 +177,15 @@ body.body--toolbar-hide .layout-tab-bar .item {
     app-region: no-drag;
 }
 
+html.starter-hide-tab-new #layouts .layout__center .layout-tab-bar--readonly .block__icon[data-type="new"],
+html.starter-hide-tab-more #layouts .layout__center .layout-tab-bar--readonly .block__icon[data-type="more"] {
+    display: none !important;
+}
+
+html.starter-hide-tab-new.starter-hide-tab-more #layouts .layout__center .layout-tab-bar--readonly {
+    min-width: 24px;
+}
+
 #layouts .layout__center .layout-tab-bar .item:not(.item--readonly) {
     box-sizing: border-box;
     margin: 0 !important;
@@ -425,6 +434,28 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     user-select: none;
 }
 
+/* 面包屑：收藏五角星在右侧工具栏最左（定位按钮左侧）；尺寸跟其它 block__icon */
+#layouts .layout__center .protyle-breadcrumb > .starter-fav-btn {
+    flex-shrink: 0;
+}
+
+#layouts .layout__center .protyle-breadcrumb > .starter-fav-btn svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+#layouts .layout__center .protyle-breadcrumb > .starter-fav-btn--on {
+    color: #f6c050;
+}
+
+#layouts .layout__center .protyle-breadcrumb > .starter-fav-btn--on svg {
+    fill: #f6c050;
+    stroke: #f6c050;
+}
+
 /* 正文 + 面包屑 + 右侧栏同色；左侧栏与顶栏仍用 chrome 底 */
 :root[data-theme-mode="light"] .layout__center .protyle,
 :root[data-theme-mode="light"] .layout__center .protyle-breadcrumb {
@@ -533,6 +564,73 @@ html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > ul > ul > ul > ul 
 
 html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > ul > ul > ul > ul > ul > li[data-type="navigation-file"] > .b3-list-item__toggle {
     padding-left: 108px !important;
+}
+
+/* 文件树：收藏 / 最近打开与官方树同一滚动区 */
+#layouts .sy__file {
+    overflow: hidden;
+}
+
+#layouts .sy__file > .starter-file-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+#layouts .sy__file > .starter-file-scroll > .fn__flex-1 {
+    flex: 0 0 auto;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+}
+
+#layouts .sy__file .starter-recent-docs,
+#layouts .sy__file .starter-fav-docs {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+    max-height: none;
+    border-bottom: 1px solid var(--b3-border-color);
+}
+
+#layouts .sy__file .starter-recent-docs__head,
+#layouts .sy__file .starter-fav-docs__head {
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+#layouts .sy__file .starter-recent-docs__head .b3-list-item__text,
+#layouts .sy__file .starter-fav-docs__head .b3-list-item__text {
+    color: var(--b3-theme-on-surface);
+    font-size: 12px;
+}
+
+#layouts .sy__file .starter-recent-docs__list,
+#layouts .sy__file .starter-fav-docs__list {
+    overflow: visible;
+    padding-bottom: 4px;
+}
+
+#layouts .sy__file .starter-recent-docs.starter-recent-docs--collapsed .starter-recent-docs__list,
+#layouts .sy__file .starter-fav-docs.starter-fav-docs--collapsed .starter-fav-docs__list {
+    display: none;
+}
+
+#layouts .sy__file .starter-recent-docs__item--current,
+#layouts .sy__file .starter-fav-docs__item--current {
+    background-color: var(--b3-list-hover);
+}
+
+#layouts .sy__file .starter-recent-docs__empty .b3-list-item__text,
+#layouts .sy__file .starter-fav-docs__more .b3-list-item__text {
+    color: var(--b3-theme-on-surface-light);
+}
+
+#layouts .sy__file [data-starter-recent-doc],
+#layouts .sy__file [data-starter-fav-doc],
+#layouts .sy__file .starter-fav-docs__more {
+    cursor: pointer;
 }
 
 /* 行内代码文字色（Notion #d6716a）；不含代码块 */
@@ -717,6 +815,10 @@ body:not(.body--toolbar-hide) #toolbar .toolbar__item--close {
 
 #starterSettingsDialog .starter-settings-lh .b3-slider {
     width: 120px;
+}
+
+#starterSettingsDialog .b3-slider:disabled {
+    opacity: 0.4;
 }
 
 #starterSettingsDialog .starter-settings-lh__val {

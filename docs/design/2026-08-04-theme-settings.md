@@ -11,6 +11,8 @@ related:
   - design/2026-09-02-table-header.md
   - design/2026-09-02-block-line-height.md
   - design/2026-09-03-file-tree-hide-notebook.md
+  - design/2026-09-03-file-tree-recent-docs.md
+  - design/2026-09-03-file-tree-favorites.md
 tags: [settings, dock, theme.js]
 ---
 
@@ -30,6 +32,13 @@ tags: [settings, dock, theme.js]
 | 2026-09-02 | 两个页签叠在同一窗格里切换，窗口高度不随内容变 |
 | 2026-09-02 | 样式页签增加「表格表头不加粗」开关与「块行间距」滑杆 |
 | 2026-09-03 | 侧栏页签增加「隐藏笔记本」，文件树可把文档提到第一级 |
+| 2026-09-03 | 侧栏页签增加「最近打开」条数滑杆，文件树顶部可列出最近文档 |
+| 2026-09-03 | 配置增加 `favoriteDocs`；保存其它项时合并写入，不冲掉收藏 |
+| 2026-09-03 | 侧栏增加「收藏」默认显示条数；0–32，超出可在文件树点「更多」 |
+| 2026-09-03 | 最近打开改为主题 `recentDocs`，打开文档即写入，保存设置时按条数裁切 |
+| 2026-09-03 | 「隐藏笔记本 / 最近打开 / 收藏」从侧栏页签挪到样式页签 |
+| 2026-09-03 | 样式增加「显示最近打开 / 显示收藏」开关；条数滑杆不再用 0 表示隐藏 |
+| 2026-09-03 | 样式增加「隐藏 Tab 栏新建文档」「隐藏 Tab 栏页签切换」，两个按钮分开配置 |
 
 ## 背景信息
 
@@ -51,9 +60,9 @@ tags: [settings, dock, theme.js]
 **生效与持久化**
 
 - 文件：`/data/storage/theme/cursorart/config.json`（工作区，经 `/api/file/getFile` / `putFile`）
-- 内容：`{ hiddenDockTypes: string[], customDocRefStyle: boolean, plainTableHead: boolean, blockLineHeight: number, hideNotebooks: boolean }`
-- 对话框页签：**侧栏**（dock 图标显隐、隐藏笔记本）、**样式**（链接样式、表格表头不加粗、块行间距）；`customDocRefStyle` / `plainTableHead` 缺省为 `true`，`blockLineHeight` 缺省 `1.625`（范围 1.2–2.6），`hideNotebooks` 缺省 `false`
-- 滑杆拖动即时改行高；表头开关即时预览；取消 / Esc / 点遮罩则还原未保存值
+- 内容：`{ hiddenDockTypes: string[], customDocRefStyle: boolean, plainTableHead: boolean, blockLineHeight: number, hideNotebooks: boolean, hideTabNewDoc: boolean, hideTabSwitch: boolean, showRecentDocs: boolean, showFavoriteDocs: boolean, recentDocsMax: number, favoriteDocsMax: number, favoriteDocs: {id, title, icon}[], recentDocs: {id, title, icon}[] }`
+- 对话框页签：**侧栏**（dock 图标显隐）、**样式**（隐藏笔记本、隐藏 Tab 栏新建文档/页签切换、最近打开/收藏的显示与条数、链接样式、表格表头不加粗、块行间距）；`customDocRefStyle` / `plainTableHead` 缺省为 `true`，`blockLineHeight` 缺省 `1.625`（范围 1.2–2.6），`hideNotebooks` / `hideTabNewDoc` / `hideTabSwitch` 缺省 `false`，`showRecentDocs` / `showFavoriteDocs` 缺省 `true`，`recentDocsMax` / `favoriteDocsMax` 缺省 `8`（范围 1–32），`favoriteDocs` / `recentDocs` 缺省 `[]`（面包屑五角星维护收藏；打开文档维护最近打开）。旧配置若条数为 0 且没有显隐字段，视为关闭对应区块并把条数恢复为 8
+- 滑杆拖动即时改行高、最近打开条数与收藏条数；显示开关即时显隐文件树区块；Tab 栏按钮开关即时显隐「+」/ 下拉；表头开关即时预览；取消 / Esc / 点遮罩则还原未保存值；保存时与现有配置合并，保留 `favoriteDocs` / `recentDocs`
 - 迁移顺序：新路径 → 旧路径 `/data/storage/theme/starter/config.json` → 旧版 `localStorage["starter-theme-config"]`；后两者读到后写入新路径并尽量清 localStorage
 - `#starterHideDockStyle` 注入 `.dock__item[data-type="…"]{display:none!important}`
 - 保存时若正在显示将被隐藏的面板，先按官方语义收起该面板
@@ -61,7 +70,7 @@ tags: [settings, dock, theme.js]
 
 **卸载**
 
-- `destroyTheme` 移除菜单监听、对话框、隐藏样式，以及 `starter-plain-table-head` / `starter-block-line-height` / `starter-hide-notebook` 与 `--starter-block-line-height`
+- `destroyTheme` 移除菜单监听、对话框、隐藏样式，以及 `starter-plain-table-head` / `starter-block-line-height` / `starter-hide-notebook` / `starter-hide-tab-new` / `starter-hide-tab-more` 与 `--starter-block-line-height`
 
 **已选中图标再点**
 
@@ -89,7 +98,11 @@ tags: [settings, dock, theme.js]
 10. 样式页签关闭「链接样式」并保存：文档引用恢复官方紫色、无图标/下划线；再打开应回到自定义样式
 11. 样式页签关闭「表格表头不加粗」并保存：表头恢复官方加粗；再打开应与单元格同字重
 12. 样式页签拖动「块行间距」应即时改变正文段落行高；取消后应回到保存值；保存后重启仍生效
-13. 侧栏打开「隐藏笔记本」并保存：文件树不见笔记本名、文档顶到第一级；关闭后恢复
+13. 样式打开「隐藏笔记本」并保存：文件树不见笔记本名、文档顶到第一级；关闭后恢复
+14. 样式关闭「显示最近打开」：文件树顶部区块消失，条数滑杆变灰；再打开应恢复列表；取消后回到保存值；保存后重启仍生效
+15. 面包屑收藏若干文档后保存其它设置：`favoriteDocs` 应仍在配置文件中
+16. 样式关闭「显示收藏」：收藏区块消失，面包屑五角星仍可点；再打开应看到已收藏项；拖动「收藏条数」只影响默认列出条数
+17. 样式分别打开「隐藏 Tab 栏新建文档」「隐藏 Tab 栏页签切换」：对应「+」或右侧下拉消失，另一个仍在；两个都开则都隐藏；取消后还原
 
 ## 其他说明
 

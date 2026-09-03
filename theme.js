@@ -8,6 +8,8 @@
  * 6) 面包屑改为文档路径（笔记本/文件夹/文档），不再显示页内块层级
  * 7) 标题栏截图高度 55 物理像素：CSS = 55 / devicePixelRatio
  * 8) 指向文档的块引用显示文档图标并加粗（不改标题/段落引用）
+ * 9) 文件树顶部「最近打开」区块
+ * 10) 面包屑收藏按钮 + 文件树「收藏」区块
  */
 (function () {
     /** 截图/屏幕上量到的标题栏高度（设备像素），不含路径条 */
@@ -43,6 +45,8 @@
     ];
 
     const DEFAULT_BLOCK_LH = 1.625;
+    const DEFAULT_RECENT_MAX = 8;
+    const DEFAULT_FAV_MAX = 8;
     const clampBlockLh = (n) => {
         const x = Number(n);
         if (!Number.isFinite(x)) {
@@ -50,18 +54,76 @@
         }
         return Math.min(2.6, Math.max(1.2, Math.round(x * 20) / 20));
     };
+    const clampListMax = (n) => {
+        const x = Number(n);
+        if (!Number.isFinite(x)) {
+            return DEFAULT_RECENT_MAX;
+        }
+        return Math.min(32, Math.max(0, Math.round(x)));
+    };
+    const listShowFromParsed = (explicit, maxRaw, defaultMax) => {
+        const max = clampListMax(maxRaw ?? defaultMax);
+        if (typeof explicit === "boolean") {
+            return {show: explicit, max: max > 0 ? max : defaultMax};
+        }
+        if (max <= 0) {
+            return {show: false, max: defaultMax};
+        }
+        return {show: true, max};
+    };
 
-    /** @type {{ hiddenDockTypes: string[], customDocRefStyle: boolean, plainTableHead: boolean, blockLineHeight: number, hideNotebooks: boolean }} */
+    const MAX_FAVORITE_DOCS = 100;
+    const normalizeFavoriteDocs = (list) => {
+        if (!Array.isArray(list)) {
+            return [];
+        }
+        const seen = new Set();
+        const out = [];
+        for (const item of list) {
+            const id = typeof item === "string" ? item : item?.id;
+            if (!id || typeof id !== "string" || seen.has(id)) {
+                continue;
+            }
+            seen.add(id);
+            out.push({
+                id,
+                title: typeof item?.title === "string" ? item.title : "",
+                icon: typeof item?.icon === "string" ? item.icon : "",
+            });
+            if (out.length >= MAX_FAVORITE_DOCS) {
+                break;
+            }
+        }
+        return out;
+    };
+
+    /** @type {{ hiddenDockTypes: string[], customDocRefStyle: boolean, plainTableHead: boolean, blockLineHeight: number, hideNotebooks: boolean, hideTabNewDoc: boolean, hideTabSwitch: boolean, showRecentDocs: boolean, showFavoriteDocs: boolean, recentDocsMax: number, favoriteDocsMax: number, favoriteDocs: {id: string, title: string, icon: string}[], recentDocs: {id: string, title: string, icon: string}[] }} */
     let config = {
         hiddenDockTypes: [],
         customDocRefStyle: true,
         plainTableHead: true,
         blockLineHeight: DEFAULT_BLOCK_LH,
         hideNotebooks: false,
+        hideTabNewDoc: false,
+        hideTabSwitch: false,
+        showRecentDocs: true,
+        showFavoriteDocs: true,
+        recentDocsMax: DEFAULT_RECENT_MAX,
+        favoriteDocsMax: DEFAULT_FAV_MAX,
+        favoriteDocs: [],
+        recentDocs: [],
     };
     let applyDocRefFeature = () => {};
     let applyStyleFeatures = () => {};
     let applyHideNotebooks = () => {};
+    let applyRecentDocs = () => {};
+    let applyFavoriteDocs = () => {};
+    let syncFavButtons = () => {};
+    /** 设置对话框拖动时的临时条数/显隐；null 表示用已保存配置 */
+    let previewRecentMax = null;
+    let previewFavoriteMax = null;
+    let previewShowRecentDocs = null;
+    let previewShowFavoriteDocs = null;
 
     /** 每侧记住上一次选中的 dock type（展开时用） */
     const lastType = {
@@ -69,15 +131,35 @@
         rightDock: "outline",
     };
 
-    const normalizeConfig = (parsed) => ({
-        hiddenDockTypes: Array.isArray(parsed?.hiddenDockTypes)
-            ? parsed.hiddenDockTypes.filter((t) => typeof t === "string")
-            : [],
-        customDocRefStyle: parsed?.customDocRefStyle !== false,
-        plainTableHead: parsed?.plainTableHead !== false,
-        blockLineHeight: clampBlockLh(parsed?.blockLineHeight ?? DEFAULT_BLOCK_LH),
-        hideNotebooks: parsed?.hideNotebooks === true,
-    });
+    const normalizeConfig = (parsed) => {
+        const recentMeta = listShowFromParsed(
+            parsed?.showRecentDocs,
+            parsed?.recentDocsMax,
+            DEFAULT_RECENT_MAX
+        );
+        const favMeta = listShowFromParsed(
+            parsed?.showFavoriteDocs,
+            parsed?.favoriteDocsMax,
+            DEFAULT_FAV_MAX
+        );
+        return {
+            hiddenDockTypes: Array.isArray(parsed?.hiddenDockTypes)
+                ? parsed.hiddenDockTypes.filter((t) => typeof t === "string")
+                : [],
+            customDocRefStyle: parsed?.customDocRefStyle !== false,
+            plainTableHead: parsed?.plainTableHead !== false,
+            blockLineHeight: clampBlockLh(parsed?.blockLineHeight ?? DEFAULT_BLOCK_LH),
+            hideNotebooks: parsed?.hideNotebooks === true,
+            hideTabNewDoc: parsed?.hideTabNewDoc === true,
+            hideTabSwitch: parsed?.hideTabSwitch === true,
+            showRecentDocs: recentMeta.show,
+            showFavoriteDocs: favMeta.show,
+            recentDocsMax: recentMeta.max,
+            favoriteDocsMax: favMeta.max,
+            favoriteDocs: normalizeFavoriteDocs(parsed?.favoriteDocs),
+            recentDocs: normalizeFavoriteDocs(parsed?.recentDocs).slice(0, recentMeta.max),
+        };
+    };
 
     const readLegacyLocal = () => {
         try {
@@ -114,7 +196,7 @@
     };
 
     const saveConfigToFile = async (next) => {
-        config = normalizeConfig(next);
+        config = normalizeConfig({...config, ...next});
         const blob = new Blob([JSON.stringify(config, null, 2)], {type: "application/json"});
         const fd = new FormData();
         fd.append("path", CONFIG_PATH);
@@ -346,7 +428,13 @@
         const docRefChecked = config.customDocRefStyle !== false ? " checked" : "";
         const tableHeadChecked = config.plainTableHead !== false ? " checked" : "";
         const hideNbChecked = config.hideNotebooks === true ? " checked" : "";
+        const hideTabNewChecked = config.hideTabNewDoc === true ? " checked" : "";
+        const hideTabSwitchChecked = config.hideTabSwitch === true ? " checked" : "";
+        const showRecentChecked = config.showRecentDocs !== false ? " checked" : "";
+        const showFavChecked = config.showFavoriteDocs !== false ? " checked" : "";
         const blockLh = clampBlockLh(config.blockLineHeight);
+        const recentMax = Math.max(1, clampListMax(config.recentDocsMax));
+        const favMax = Math.max(1, clampListMax(config.favoriteDocsMax));
 
         const dialog = document.createElement("div");
         dialog.id = DIALOG_ID;
@@ -367,6 +455,9 @@
           侧栏工具显示
           <div class="b3-label__text">开关打开 = 显示该工具图标；关闭 = 隐藏（仅本主题生效）</div>
         </div>
+        ${rows}
+      </div>
+      <div data-starter-pane="style">
         <label class="fn__flex b3-label config-item">
           <div class="fn__flex-1">
             隐藏笔记本
@@ -374,9 +465,54 @@
           </div>
           <input class="b3-switch fn__flex-center" type="checkbox" data-starter-hide-notebook${hideNbChecked}>
         </label>
-        ${rows}
-      </div>
-      <div data-starter-pane="style">
+        <label class="fn__flex b3-label config-item">
+          <div class="fn__flex-1">
+            隐藏 Tab 栏新建文档
+            <div class="b3-label__text">藏掉文档 Tab 条上的「+」</div>
+          </div>
+          <input class="b3-switch fn__flex-center" type="checkbox" data-starter-hide-tab-new${hideTabNewChecked}>
+        </label>
+        <label class="fn__flex b3-label config-item">
+          <div class="fn__flex-1">
+            隐藏 Tab 栏页签切换
+            <div class="b3-label__text">藏掉文档 Tab 条右侧的下拉按钮</div>
+          </div>
+          <input class="b3-switch fn__flex-center" type="checkbox" data-starter-hide-tab-switch${hideTabSwitchChecked}>
+        </label>
+        <label class="fn__flex b3-label config-item">
+          <div class="fn__flex-1">
+            显示最近打开
+            <div class="b3-label__text">文件树顶部列出最近打开的文档</div>
+          </div>
+          <input class="b3-switch fn__flex-center" type="checkbox" data-starter-show-recent${showRecentChecked}>
+        </label>
+        <label class="fn__flex b3-label config-item">
+          <div class="fn__flex-1">
+            最近打开条数
+            <div class="b3-label__text">最多显示几条</div>
+          </div>
+          <div class="fn__flex starter-settings-lh">
+            <input class="b3-slider" type="range" min="1" max="32" step="1" value="${recentMax}" data-starter-recent-max>
+            <span class="starter-settings-lh__val" data-starter-recent-max-val>${recentMax}</span>
+          </div>
+        </label>
+        <label class="fn__flex b3-label config-item">
+          <div class="fn__flex-1">
+            显示收藏
+            <div class="b3-label__text">文件树顶部列出收藏的文档；面包屑五角星仍可用来收藏</div>
+          </div>
+          <input class="b3-switch fn__flex-center" type="checkbox" data-starter-show-fav${showFavChecked}>
+        </label>
+        <label class="fn__flex b3-label config-item">
+          <div class="fn__flex-1">
+            收藏条数
+            <div class="b3-label__text">默认显示条数，超出可点「更多」展开</div>
+          </div>
+          <div class="fn__flex starter-settings-lh">
+            <input class="b3-slider" type="range" min="1" max="32" step="1" value="${favMax}" data-starter-fav-max>
+            <span class="starter-settings-lh__val" data-starter-fav-max-val>${favMax}</span>
+          </div>
+        </label>
         <label class="fn__flex b3-label config-item">
           <div class="fn__flex-1">
             链接样式
@@ -417,9 +553,15 @@
 </div>`;
 
         const onClose = (revert) => {
+            previewRecentMax = null;
+            previewFavoriteMax = null;
+            previewShowRecentDocs = null;
+            previewShowFavoriteDocs = null;
             if (revert) {
                 applyStyleFeatures();
                 applyHideNotebooks();
+                applyRecentDocs();
+                applyFavoriteDocs();
             }
             dialog.removeEventListener("click", onClick);
             document.removeEventListener("keydown", onKey, true);
@@ -458,19 +600,38 @@
                 const customDocRefStyle = !!dialog.querySelector("[data-starter-doc-ref-style]")?.checked;
                 const plainTableHead = !!dialog.querySelector("[data-starter-plain-table-head]")?.checked;
                 const hideNotebooks = !!dialog.querySelector("[data-starter-hide-notebook]")?.checked;
+                const hideTabNewDoc = !!dialog.querySelector("[data-starter-hide-tab-new]")?.checked;
+                const hideTabSwitch = !!dialog.querySelector("[data-starter-hide-tab-switch]")?.checked;
+                const showRecentDocs = !!dialog.querySelector("[data-starter-show-recent]")?.checked;
+                const showFavoriteDocs = !!dialog.querySelector("[data-starter-show-fav]")?.checked;
                 const blockLineHeight = clampBlockLh(dialog.querySelector("[data-starter-block-lh]")?.value);
+                const recentDocsMax = Math.max(1, clampListMax(dialog.querySelector("[data-starter-recent-max]")?.value));
+                const favoriteDocsMax = Math.max(1, clampListMax(dialog.querySelector("[data-starter-fav-max]")?.value));
                 closeIfActiveHidden(hidden);
+                previewRecentMax = null;
+                previewFavoriteMax = null;
+                previewShowRecentDocs = null;
+                previewShowFavoriteDocs = null;
                 saveConfigToFile({
                     hiddenDockTypes: hidden,
                     customDocRefStyle,
                     plainTableHead,
                     hideNotebooks,
+                    hideTabNewDoc,
+                    hideTabSwitch,
+                    showRecentDocs,
+                    showFavoriteDocs,
                     blockLineHeight,
+                    recentDocsMax,
+                    favoriteDocsMax,
+                    recentDocs: normalizeFavoriteDocs(config.recentDocs).slice(0, recentDocsMax),
                 }).then((ok) => {
                     applyHiddenDockTypes();
                     applyDocRefFeature();
                     applyStyleFeatures();
                     applyHideNotebooks();
+                    applyRecentDocs();
+                    applyFavoriteDocs();
                     onClose();
                     if (!ok && window.siyuan?.languages) {
                         /* 失败已 console.warn；仍关闭对话框以免卡死 */
@@ -508,6 +669,52 @@
             } else {
                 stopHideNotebooks();
             }
+        });
+        dialog.querySelector("[data-starter-hide-tab-new]")?.addEventListener("change", (e) => {
+            document.documentElement.classList.toggle("starter-hide-tab-new", !!e.target.checked);
+        });
+        dialog.querySelector("[data-starter-hide-tab-switch]")?.addEventListener("change", (e) => {
+            document.documentElement.classList.toggle("starter-hide-tab-more", !!e.target.checked);
+        });
+        const recentInput = dialog.querySelector("[data-starter-recent-max]");
+        const recentVal = dialog.querySelector("[data-starter-recent-max-val]");
+        const syncRecentControls = () => {
+            const on = !!dialog.querySelector("[data-starter-show-recent]")?.checked;
+            if (recentInput) {
+                recentInput.disabled = !on;
+            }
+            previewShowRecentDocs = on;
+            applyRecentDocs();
+        };
+        dialog.querySelector("[data-starter-show-recent]")?.addEventListener("change", syncRecentControls);
+        syncRecentControls();
+        recentInput?.addEventListener("input", () => {
+            const v = Math.max(1, clampListMax(recentInput.value));
+            if (recentVal) {
+                recentVal.textContent = String(v);
+            }
+            previewRecentMax = v;
+            applyRecentDocs();
+        });
+        const favMaxInput = dialog.querySelector("[data-starter-fav-max]");
+        const favMaxVal = dialog.querySelector("[data-starter-fav-max-val]");
+        const syncFavControls = () => {
+            const on = !!dialog.querySelector("[data-starter-show-fav]")?.checked;
+            if (favMaxInput) {
+                favMaxInput.disabled = !on;
+            }
+            previewShowFavoriteDocs = on;
+            applyFavoriteDocs();
+        };
+        dialog.querySelector("[data-starter-show-fav]")?.addEventListener("change", syncFavControls);
+        syncFavControls();
+        favMaxInput?.addEventListener("input", () => {
+            const v = Math.max(1, clampListMax(favMaxInput.value));
+            if (favMaxVal) {
+                favMaxVal.textContent = String(v);
+            }
+            previewFavoriteMax = v;
+            applyFavoriteDocs();
         });
     };
 
@@ -1221,6 +1428,7 @@
             if (bar && rootId) {
                 fillPathBar(bar, rootId);
             }
+            syncFavButtons();
         });
     };
 
@@ -1231,6 +1439,7 @@
         pathBarRaf = requestAnimationFrame(() => {
             pathBarRaf = 0;
             refreshAllPathBars();
+            scheduleRecentDocs(true);
         });
     };
 
@@ -1288,6 +1497,7 @@
             pathBarRaf = 0;
         }
         document.querySelectorAll(`.${PATH_BAR_CLASS}`).forEach((el) => el.remove());
+        document.querySelectorAll("#layouts .layout__center .starter-fav-btn").forEach((el) => el.remove());
         document.querySelectorAll(".protyle-title[data-starter-path-bound]").forEach((el) => {
             delete el.dataset.starterPathBound;
         });
@@ -1758,9 +1968,782 @@
         }
     };
 
+    const RECENT_HOST_CLASS = "starter-recent-docs";
+    const FAV_HOST_CLASS = "starter-fav-docs";
+    const FAV_BTN_CLASS = "starter-fav-btn";
+    const SCROLL_CLASS = "starter-file-scroll";
+    const STAR_SVG =
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.1l3.25 6.58 7.26.8-5.48 5.07 1.54 7.23L12 17.2 5.43 20.78l1.54-7.23L1.49 8.48l7.26-.8L12 1.1z"/></svg>';
+    const isRecentShown = () => (previewShowRecentDocs ?? config.showRecentDocs) !== false;
+    const isFavShown = () => (previewShowFavoriteDocs ?? config.showFavoriteDocs) !== false;
+    const getRecentMax = () => (isRecentShown() ? clampListMax(previewRecentMax ?? config.recentDocsMax) : 0);
+    const getFavMax = () => (isFavShown() ? clampListMax(previewFavoriteMax ?? config.favoriteDocsMax) : 0);
+
+    const isClosedNotebookList = (el, fileEl) =>
+        el === fileEl.lastElementChild &&
+        el.tagName === "UL" &&
+        el.classList.contains("b3-list") &&
+        !el.getAttribute("data-url");
+
+    const ensureFileScroll = (fileEl) => {
+        const icons = fileEl.querySelector(":scope > .block__icons");
+        if (!icons) {
+            return fileEl.querySelector(`:scope > .${SCROLL_CLASS}`);
+        }
+        let scroll = fileEl.querySelector(`:scope > .${SCROLL_CLASS}`);
+        if (!scroll) {
+            if (!icons.nextElementSibling) {
+                return null;
+            }
+            const toMove = [];
+            for (let el = icons.nextElementSibling; el; el = el.nextElementSibling) {
+                if (el.classList.contains(SCROLL_CLASS) || isClosedNotebookList(el, fileEl)) {
+                    break;
+                }
+                toMove.push(el);
+            }
+            scroll = document.createElement("div");
+            scroll.className = SCROLL_CLASS;
+            icons.insertAdjacentElement("afterend", scroll);
+            toMove.forEach((el) => scroll.appendChild(el));
+        }
+        const stray = [];
+        for (let el = scroll.nextElementSibling; el; el = el.nextElementSibling) {
+            if (isClosedNotebookList(el, fileEl) || el.classList.contains(SCROLL_CLASS)) {
+                break;
+            }
+            stray.push(el);
+        }
+        stray.forEach((el) => scroll.appendChild(el));
+        return scroll;
+    };
+
+    const unwrapFileScroll = () => {
+        document.querySelectorAll(`#layouts .sy__file > .${SCROLL_CLASS}`).forEach((scroll) => {
+            const parent = scroll.parentElement;
+            if (!parent) {
+                scroll.remove();
+                return;
+            }
+            while (scroll.firstChild) {
+                parent.insertBefore(scroll.firstChild, scroll);
+            }
+            scroll.remove();
+        });
+    };
+
+    const isTreeChild = (el) =>
+        el &&
+        !el.classList.contains(FAV_HOST_CLASS) &&
+        !el.classList.contains(RECENT_HOST_CLASS) &&
+        !el.classList.contains(SCROLL_CLASS);
+    let recentRecordTimer = 0;
+    let recentMountObs = null;
+    let recentStarted = false;
+    let recentCollapsed = false;
+    let recentRenderKey = "";
+
+    const getActiveDocId = () => {
+        const title =
+            document.querySelector(
+                "#layouts .layout__center .layout__wnd--active .protyle:not(.fn__none) .protyle-title"
+            ) || document.querySelector("#layouts .layout__center .protyle:not(.fn__none) .protyle-title");
+        const fromTitle = title?.getAttribute("data-node-id") || "";
+        if (fromTitle) {
+            return fromTitle;
+        }
+        const tab =
+            document.querySelector(
+                "#layouts .layout__center .layout__wnd--active .layout-tab-bar .item--focus:not(.item--readonly)"
+            ) ||
+            document.querySelector("#layouts .layout__center .layout-tab-bar .item--focus:not(.item--readonly)");
+        const raw = tab?.getAttribute("data-initdata");
+        if (!raw) {
+            return "";
+        }
+        try {
+            const data = JSON.parse(raw);
+            return data.rootId || data.rootID || "";
+        } catch (err) {
+            return "";
+        }
+    };
+
+    const snapshotDoc = (id, hintEl) => {
+        const titleEl =
+            hintEl?.querySelector?.(".protyle-title") ||
+            document.querySelector(`#layouts .layout__center .protyle-title[data-node-id="${id}"]`);
+        const name = titleEl?.querySelector(".protyle-title__input")?.textContent?.trim() || "";
+        const hintName = hintEl?.querySelector?.(":scope > .b3-list-item__text")?.textContent?.trim() || "";
+        const treeLi = document.querySelector(`#layouts .sy__file .b3-list-item[data-node-id="${id}"]`);
+        const treeName = treeLi?.querySelector(":scope > .b3-list-item__text")?.textContent?.trim() || "";
+        const tree = metaFromFileTree(id);
+        const known =
+            config.favoriteDocs.find((d) => d.id === id) || config.recentDocs.find((d) => d.id === id);
+        return {
+            id,
+            title: name || hintName || treeName || known?.title || "",
+            icon: tree?.icon || known?.icon || "",
+        };
+    };
+
+    const recentIconInner = (icon) => {
+        const paint = metaToPaint({isDoc: true, icon: (icon || "").trim()});
+        if (paint.kind === "img" && paint.src) {
+            return `<img src="${escapeHtml(paint.src)}" alt="">`;
+        }
+        return escapeHtml(paint.glyph || defaultDocGlyph());
+    };
+
+    const removeRecentHosts = () => {
+        document.querySelectorAll(`#layouts .sy__file .${RECENT_HOST_CLASS}`).forEach((el) => el.remove());
+        recentRenderKey = "";
+    };
+
+    const onRecentHostClick = (e) => {
+        const host = e.currentTarget;
+        const from = e.target instanceof Element ? e.target : e.target?.parentElement;
+        const toggle = from?.closest?.("[data-starter-recent='toggle']");
+        if (toggle && host.contains(toggle)) {
+            e.preventDefault();
+            e.stopPropagation();
+            recentCollapsed = !host.classList.contains("starter-recent-docs--collapsed");
+            host.classList.toggle("starter-recent-docs--collapsed", recentCollapsed);
+            host.querySelector(".starter-recent-docs__head .b3-list-item__arrow")
+                ?.classList.toggle("b3-list-item__arrow--open", !recentCollapsed);
+            return;
+        }
+        const item = from?.closest?.("[data-starter-recent-doc]");
+        if (!item || !host.contains(item)) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        openDocById(item.getAttribute("data-node-id"));
+    };
+
+    const ensureRecentHost = (fileEl) => {
+        const scroll = ensureFileScroll(fileEl);
+        if (!scroll) {
+            return null;
+        }
+        let host = scroll.querySelector(`:scope > .${RECENT_HOST_CLASS}`);
+        if (host) {
+            return host;
+        }
+        host = document.createElement("div");
+        host.className = RECENT_HOST_CLASS;
+        host.innerHTML = `<div class="b3-list-item starter-recent-docs__head" data-starter-recent="toggle">
+  <span class="b3-list-item__toggle">
+    <svg class="b3-list-item__arrow b3-list-item__arrow--open"><use xlink:href="#iconRight"></use></svg>
+  </span>
+  <span class="b3-list-item__text">最近打开</span>
+</div>
+<ul class="b3-list b3-list--background starter-recent-docs__list"></ul>`;
+        host.addEventListener("click", onRecentHostClick);
+        const fav = scroll.querySelector(`:scope > .${FAV_HOST_CLASS}`);
+        const tree = [...scroll.children].find(isTreeChild);
+        if (fav) {
+            fav.insertAdjacentElement("afterend", host);
+        } else if (tree) {
+            scroll.insertBefore(host, tree);
+        } else {
+            scroll.appendChild(host);
+        }
+        return host;
+    };
+
+    const renderRecentHosts = (items) => {
+        const max = getRecentMax();
+        if (max <= 0 || !items.length) {
+            removeRecentHosts();
+            return;
+        }
+        const currentId = getActiveDocId();
+        const shown = items.slice(0, max);
+        const key = `${max}|${recentCollapsed ? 1 : 0}|${currentId}|${shown
+            .map((d) => `${d.id || ""}\t${d.title || ""}\t${d.icon || ""}`)
+            .join("|")}`;
+        const files = document.querySelectorAll(FILE_TREE_SEL);
+        if (!files.length) {
+            return;
+        }
+        files.forEach((fileEl) => {
+            const host = ensureRecentHost(fileEl);
+            if (!host) {
+                return;
+            }
+            host.classList.toggle("starter-recent-docs--collapsed", recentCollapsed);
+            const arrow = host.querySelector(".starter-recent-docs__head .b3-list-item__arrow");
+            arrow?.classList.toggle("b3-list-item__arrow--open", !recentCollapsed);
+            const list = host.querySelector(".starter-recent-docs__list");
+            if (!list) {
+                return;
+            }
+            if (key === recentRenderKey && list.childElementCount) {
+                list.querySelectorAll("[data-starter-recent-doc]").forEach((li) => {
+                    li.classList.toggle(
+                        "starter-recent-docs__item--current",
+                        li.getAttribute("data-node-id") === currentId
+                    );
+                });
+                return;
+            }
+            list.innerHTML = shown
+                .map((item) => {
+                    const id = item.id || "";
+                    const title = item.title || "无标题";
+                    const current = id && id === currentId ? " starter-recent-docs__item--current" : "";
+                    return `<li class="b3-list-item${current}" data-node-id="${escapeHtml(id)}" data-starter-recent-doc>
+  <span class="b3-list-item__icon">${recentIconInner(item.icon)}</span>
+  <span class="b3-list-item__text">${escapeHtml(title)}</span>
+</li>`;
+                })
+                .join("");
+        });
+        recentRenderKey = key;
+    };
+
+    const renderStoredRecentDocs = () => {
+        renderRecentHosts(config.recentDocs);
+    };
+
+    const recordRecentDocById = async (id, hintEl) => {
+        const persistMax = clampListMax(config.recentDocsMax);
+        if (persistMax <= 0) {
+            renderStoredRecentDocs();
+            return;
+        }
+        if (!id) {
+            renderStoredRecentDocs();
+            return;
+        }
+        const item = snapshotDoc(id, hintEl);
+        const prev = config.recentDocs[0];
+        if (
+            prev?.id === item.id &&
+            prev.title === item.title &&
+            prev.icon === item.icon &&
+            config.recentDocs.length <= persistMax
+        ) {
+            renderStoredRecentDocs();
+            return;
+        }
+        const next = [item, ...config.recentDocs.filter((d) => d.id !== id)].slice(0, persistMax);
+        const save = saveConfigToFile({recentDocs: next});
+        renderStoredRecentDocs();
+        await save;
+    };
+
+    const recordRecentDoc = () => recordRecentDocById(getActiveDocId());
+
+    let pendingRecordId = "";
+    let pendingRecordHint = null;
+    let recentRenderTimer = 0;
+    let recentPollTimer = 0;
+    const scheduleRecord = (id, hintEl) => {
+        if (id) {
+            pendingRecordId = id;
+            pendingRecordHint = hintEl || null;
+        }
+        if (recentRecordTimer) {
+            clearTimeout(recentRecordTimer);
+        }
+        recentRecordTimer = setTimeout(() => {
+            recentRecordTimer = 0;
+            const recId = pendingRecordId || getActiveDocId();
+            const hint = pendingRecordHint;
+            pendingRecordId = "";
+            pendingRecordHint = null;
+            recordRecentDocById(recId, hint);
+        }, 150);
+    };
+
+    const scheduleRecentDocs = (record) => {
+        if (record) {
+            scheduleRecord("", null);
+            return;
+        }
+        if (recentRenderTimer) {
+            clearTimeout(recentRenderTimer);
+        }
+        recentRenderTimer = setTimeout(() => {
+            recentRenderTimer = 0;
+            renderStoredRecentDocs();
+        }, 80);
+    };
+
+    const onProtyleRecentDocs = (e) => {
+        const protyle = e?.detail?.protyle;
+        const id = protyle?.block?.rootID || protyle?.options?.blockId || "";
+        scheduleRecord(id, protyle?.element);
+    };
+
+    const getSiyuanPlugins = () => {
+        const list = window.siyuan?.ws?.app?.plugins || window.siyuan?.app?.plugins;
+        return Array.isArray(list) ? list : [];
+    };
+
+    const recentBusBinds = [];
+    let recentBusPoll = 0;
+    let recentCustomBus = null;
+    const bindPluginBuses = () => {
+        const register = window.siyuan?.registerCustomEventBus;
+        if (!recentCustomBus && typeof register === "function") {
+            try {
+                recentCustomBus = register("cursorart-recent");
+                recentCustomBus?.on?.("switch-protyle", onProtyleRecentDocs);
+                recentCustomBus?.on?.("loaded-protyle-static", onProtyleRecentDocs);
+            } catch (err) {
+                recentCustomBus = null;
+            }
+        }
+        getSiyuanPlugins().forEach((p) => {
+            if (!p?.eventBus?.on || recentBusBinds.some((b) => b.bus === p.eventBus)) {
+                return;
+            }
+            p.eventBus.on("switch-protyle", onProtyleRecentDocs);
+            p.eventBus.on("loaded-protyle-static", onProtyleRecentDocs);
+            recentBusBinds.push({bus: p.eventBus});
+        });
+    };
+    const unbindPluginBuses = () => {
+        recentBusBinds.forEach(({bus}) => {
+            bus.off?.("switch-protyle", onProtyleRecentDocs);
+            bus.off?.("loaded-protyle-static", onProtyleRecentDocs);
+        });
+        recentBusBinds.length = 0;
+        recentCustomBus?.off?.("switch-protyle", onProtyleRecentDocs);
+        recentCustomBus?.off?.("loaded-protyle-static", onProtyleRecentDocs);
+        recentCustomBus = null;
+        if (recentBusPoll) {
+            clearInterval(recentBusPoll);
+            recentBusPoll = 0;
+        }
+    };
+
+    const tabRootId = (tab) => {
+        const raw = tab?.getAttribute?.("data-initdata");
+        if (!raw) {
+            return "";
+        }
+        try {
+            const data = JSON.parse(raw);
+            return data.rootId || data.rootID || "";
+        } catch (err) {
+            return "";
+        }
+    };
+
+    const onRecentOpenPointer = (e) => {
+        const from = e.target instanceof Element ? e.target : e.target?.parentElement;
+        if (!from) {
+            return;
+        }
+        if (from.closest?.(".b3-list-item__toggle, .b3-list-item__action")) {
+            return;
+        }
+        const docLi = from.closest?.(
+            "[data-starter-recent-doc], [data-starter-fav-doc], #layouts .sy__file li[data-type='navigation-file'][data-node-id]"
+        );
+        if (docLi) {
+            const id = docLi.getAttribute("data-node-id");
+            if (id) {
+                scheduleRecord(id, docLi);
+            }
+            return;
+        }
+        const tab = from.closest?.("#layouts .layout-tab-bar .item:not(.item--readonly)");
+        if (tab) {
+            scheduleRecord(tabRootId(tab), null);
+        }
+    };
+
+    const onRecentActiveMut = (mutations) => {
+        for (const m of mutations) {
+            if (m.type === "childList") {
+                for (const n of m.addedNodes) {
+                    if (
+                        n.nodeType === 1 &&
+                        (n.classList?.contains("protyle") ||
+                            n.classList?.contains("protyle-title") ||
+                            n.querySelector?.(".protyle-title, .protyle"))
+                    ) {
+                        scheduleRecentDocs(true);
+                        return;
+                    }
+                }
+                continue;
+            }
+            const t = m.target;
+            if (!(t instanceof Element)) {
+                continue;
+            }
+            if (m.attributeName === "data-node-id" && t.classList.contains("protyle-title")) {
+                scheduleRecentDocs(true);
+                return;
+            }
+            if (m.attributeName === "class") {
+                if (
+                    t.classList.contains("protyle") ||
+                    t.classList.contains("layout__wnd") ||
+                    (t.classList.contains("item") && t.closest(".layout-tab-bar"))
+                ) {
+                    scheduleRecentDocs(true);
+                    return;
+                }
+            }
+        }
+    };
+
+    let recentActiveObs = null;
+    const attachRecentActiveObs = () => {
+        if (recentActiveObs) {
+            return true;
+        }
+        const center = document.querySelector("#layouts .layout__center");
+        if (!center) {
+            return false;
+        }
+        recentActiveObs = new MutationObserver(onRecentActiveMut);
+        recentActiveObs.observe(center, {
+            subtree: true,
+            childList: true,
+            attributes: true,
+            attributeFilter: ["class", "data-node-id"],
+        });
+        return true;
+    };
+
+    const startRecentDocs = () => {
+        if (recentStarted) {
+            return;
+        }
+        recentStarted = true;
+        document.addEventListener("loaded-protyle-static", onProtyleRecentDocs);
+        document.addEventListener("switch-protyle", onProtyleRecentDocs);
+        document.addEventListener("pointerdown", onRecentOpenPointer, true);
+        bindPluginBuses();
+        recentBusPoll = setInterval(bindPluginBuses, 1000);
+        setTimeout(() => {
+            if (recentBusPoll) {
+                clearInterval(recentBusPoll);
+                recentBusPoll = 0;
+            }
+        }, 12000);
+        attachRecentActiveObs();
+        recentPollTimer = setInterval(() => {
+            if (!attachRecentActiveObs()) {
+                return;
+            }
+            const id = getActiveDocId();
+            if (id && id !== config.recentDocs[0]?.id) {
+                scheduleRecord(id, null);
+            }
+        }, 400);
+        const host = document.querySelector("#layouts") || document.body;
+        recentMountObs = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                for (const n of m.addedNodes) {
+                    if (
+                        n.nodeType === 1 &&
+                        (n.classList?.contains("sy__file") || n.querySelector?.(".sy__file"))
+                    ) {
+                        scheduleRecentDocs(false);
+                        return;
+                    }
+                }
+            }
+        });
+        recentMountObs.observe(host, {childList: true, subtree: true});
+        scheduleRecentDocs(true);
+    };
+
+    const stopRecentDocs = () => {
+        recentStarted = false;
+        document.removeEventListener("loaded-protyle-static", onProtyleRecentDocs);
+        document.removeEventListener("switch-protyle", onProtyleRecentDocs);
+        document.removeEventListener("pointerdown", onRecentOpenPointer, true);
+        unbindPluginBuses();
+        recentActiveObs?.disconnect();
+        recentActiveObs = null;
+        recentMountObs?.disconnect();
+        recentMountObs = null;
+        if (recentRecordTimer) {
+            clearTimeout(recentRecordTimer);
+            recentRecordTimer = 0;
+        }
+        if (recentRenderTimer) {
+            clearTimeout(recentRenderTimer);
+            recentRenderTimer = 0;
+        }
+        if (recentPollTimer) {
+            clearInterval(recentPollTimer);
+            recentPollTimer = 0;
+        }
+        removeRecentHosts();
+    };
+
+    applyRecentDocs = () => {
+        startRecentDocs();
+        renderStoredRecentDocs();
+    };
+
+    const isFavDoc = (id) => !!(id && config.favoriteDocs.some((d) => d.id === id));
+
+    const toggleFavoriteDoc = async (id, protyleEl) => {
+        if (!id) {
+            return;
+        }
+        let next;
+        if (isFavDoc(id)) {
+            next = config.favoriteDocs.filter((d) => d.id !== id);
+        } else {
+            next = [snapshotDoc(id, protyleEl), ...config.favoriteDocs.filter((d) => d.id !== id)];
+        }
+        await saveConfigToFile({favoriteDocs: next});
+        applyFavoriteDocs();
+        syncFavButtons();
+    };
+
+    let favCollapsed = false;
+    let favListExpanded = false;
+    let favRenderKey = "";
+    let favMountObs = null;
+    let favStarted = false;
+
+    const removeFavHosts = () => {
+        document.querySelectorAll(`#layouts .sy__file .${FAV_HOST_CLASS}`).forEach((el) => el.remove());
+        favRenderKey = "";
+    };
+
+    const onFavHostClick = (e) => {
+        const host = e.currentTarget;
+        const from = e.target instanceof Element ? e.target : e.target?.parentElement;
+        const unfav = from?.closest?.("[data-starter-unfav]");
+        if (unfav && host.contains(unfav)) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFavoriteDoc(unfav.closest("[data-starter-fav-doc]")?.getAttribute("data-node-id") || "");
+            return;
+        }
+        const more = from?.closest?.("[data-starter-fav='more']");
+        if (more && host.contains(more)) {
+            e.preventDefault();
+            e.stopPropagation();
+            favListExpanded = !favListExpanded;
+            renderFavHosts(config.favoriteDocs);
+            return;
+        }
+        const toggle = from?.closest?.("[data-starter-fav='toggle']");
+        if (toggle && host.contains(toggle)) {
+            e.preventDefault();
+            e.stopPropagation();
+            favCollapsed = !host.classList.contains("starter-fav-docs--collapsed");
+            host.classList.toggle("starter-fav-docs--collapsed", favCollapsed);
+            host.querySelector(".starter-fav-docs__head .b3-list-item__arrow")
+                ?.classList.toggle("b3-list-item__arrow--open", !favCollapsed);
+            return;
+        }
+        const item = from?.closest?.("[data-starter-fav-doc]");
+        if (!item || !host.contains(item)) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        openDocById(item.getAttribute("data-node-id"));
+    };
+
+    const ensureFavHost = (fileEl) => {
+        const scroll = ensureFileScroll(fileEl);
+        if (!scroll) {
+            return null;
+        }
+        let host = scroll.querySelector(`:scope > .${FAV_HOST_CLASS}`);
+        if (host) {
+            return host;
+        }
+        host = document.createElement("div");
+        host.className = FAV_HOST_CLASS;
+        host.innerHTML = `<div class="b3-list-item starter-fav-docs__head" data-starter-fav="toggle">
+  <span class="b3-list-item__toggle">
+    <svg class="b3-list-item__arrow b3-list-item__arrow--open"><use xlink:href="#iconRight"></use></svg>
+  </span>
+  <span class="b3-list-item__text">收藏</span>
+</div>
+<ul class="b3-list b3-list--background starter-fav-docs__list"></ul>`;
+        host.addEventListener("click", onFavHostClick);
+        const recent = scroll.querySelector(`:scope > .${RECENT_HOST_CLASS}`);
+        if (recent) {
+            scroll.insertBefore(host, recent);
+        } else {
+            const tree = [...scroll.children].find(isTreeChild);
+            if (tree) {
+                scroll.insertBefore(host, tree);
+            } else {
+                scroll.appendChild(host);
+            }
+        }
+        return host;
+    };
+
+    const renderFavHosts = (items) => {
+        const max = getFavMax();
+        if (max <= 0 || !items.length) {
+            removeFavHosts();
+            return;
+        }
+        const currentId = getActiveDocId();
+        const hidden = Math.max(0, items.length - max);
+        if (hidden === 0) {
+            favListExpanded = false;
+        }
+        const shown = favListExpanded ? items : items.slice(0, max);
+        const key = `${max}|${favCollapsed ? 1 : 0}|${favListExpanded ? 1 : 0}|${currentId}|${items
+            .map((d) => `${d.id}\t${d.title || ""}\t${d.icon || ""}`)
+            .join("|")}`;
+        const files = document.querySelectorAll(FILE_TREE_SEL);
+        if (!files.length) {
+            return;
+        }
+        files.forEach((fileEl) => {
+            const host = ensureFavHost(fileEl);
+            if (!host) {
+                return;
+            }
+            host.classList.toggle("starter-fav-docs--collapsed", favCollapsed);
+            host.querySelector(".starter-fav-docs__head .b3-list-item__arrow")
+                ?.classList.toggle("b3-list-item__arrow--open", !favCollapsed);
+            const list = host.querySelector(".starter-fav-docs__list");
+            if (!list) {
+                return;
+            }
+            if (key === favRenderKey && list.childElementCount) {
+                list.querySelectorAll("[data-starter-fav-doc]").forEach((li) => {
+                    li.classList.toggle("starter-fav-docs__item--current", li.getAttribute("data-node-id") === currentId);
+                });
+                return;
+            }
+            const rows = shown.map((item) => {
+                const id = item.id || "";
+                const title = item.title || "无标题";
+                const current = id && id === currentId ? " starter-fav-docs__item--current" : "";
+                return `<li class="b3-list-item b3-list-item--hide-action${current}" data-node-id="${escapeHtml(id)}" data-starter-fav-doc>
+  <span class="b3-list-item__icon">${recentIconInner(item.icon)}</span>
+  <span class="b3-list-item__text">${escapeHtml(title)}</span>
+  <span class="b3-list-item__action ariaLabel" data-starter-unfav aria-label="取消收藏">
+    <svg><use xlink:href="#iconClose"></use></svg>
+  </span>
+</li>`;
+            });
+            if (hidden > 0) {
+                const label = favListExpanded ? "折叠" : `更多（${hidden}）`;
+                rows.push(
+                    `<li class="b3-list-item starter-fav-docs__more" data-starter-fav="more">
+  <span class="b3-list-item__text">${label}</span>
+</li>`
+                );
+            }
+            list.innerHTML = rows.join("");
+        });
+        favRenderKey = key;
+    };
+
+    const onFavBtnClick = (e) => {
+        const from = e.target instanceof Element ? e.target : e.target?.parentElement;
+        const btn = from?.closest?.("[data-starter-fav='1']");
+        if (!btn || !btn.closest("#layouts .layout__center .protyle-breadcrumb")) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        toggleFavoriteDoc(btn.getAttribute("data-starter-doc-id") || "", btn.closest(".protyle"));
+    };
+
+    const placeFavButton = (host, btn) => {
+        const locate = host.querySelector(':scope > [data-type="fhelper-locate-in-tree"]');
+        const lock = host.querySelector(':scope > [data-type="readonly"]');
+        const space = host.querySelector(":scope > .protyle-breadcrumb__space");
+        const anchor = locate || lock;
+        if (anchor) {
+            if (btn.nextElementSibling !== anchor) {
+                anchor.insertAdjacentElement("beforebegin", btn);
+            }
+            return;
+        }
+        if (space && space.nextElementSibling !== btn) {
+            space.insertAdjacentElement("afterend", btn);
+        }
+    };
+
+    syncFavButtons = () => {
+        document.querySelectorAll("#layouts .layout__center .protyle-breadcrumb").forEach((host) => {
+            const protyleEl = host.closest(".protyle");
+            const id = protyleEl?.querySelector(".protyle-title")?.getAttribute("data-node-id") || "";
+            let btn = host.querySelector(`:scope > .${FAV_BTN_CLASS}`);
+            if (!btn) {
+                btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = `block__icon fn__flex-center ariaLabel ${FAV_BTN_CLASS}`;
+                btn.setAttribute("data-starter-fav", "1");
+                btn.innerHTML = STAR_SVG;
+            }
+            placeFavButton(host, btn);
+            const on = isFavDoc(id);
+            btn.classList.toggle("starter-fav-btn--on", on);
+            btn.setAttribute("data-starter-doc-id", id);
+            btn.setAttribute("aria-label", on ? "取消收藏" : "收藏");
+        });
+    };
+
+    const startFavoriteDocs = () => {
+        if (favStarted) {
+            return;
+        }
+        favStarted = true;
+        document.addEventListener("click", onFavBtnClick, true);
+        document.addEventListener("loaded-protyle-static", syncFavButtons);
+        document.addEventListener("switch-protyle", syncFavButtons);
+        const layout = document.querySelector("#layouts") || document.body;
+        favMountObs = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                for (const n of m.addedNodes) {
+                    if (
+                        n.nodeType === 1 &&
+                        (n.classList?.contains("sy__file") || n.querySelector?.(".sy__file"))
+                    ) {
+                        applyFavoriteDocs();
+                        return;
+                    }
+                }
+            }
+        });
+        favMountObs.observe(layout, {childList: true, subtree: true});
+    };
+
+    const stopFavoriteDocs = () => {
+        favStarted = false;
+        document.removeEventListener("click", onFavBtnClick, true);
+        document.removeEventListener("loaded-protyle-static", syncFavButtons);
+        document.removeEventListener("switch-protyle", syncFavButtons);
+        favMountObs?.disconnect();
+        favMountObs = null;
+        removeFavHosts();
+        document.querySelectorAll(`.${FAV_BTN_CLASS}`).forEach((el) => el.remove());
+        unwrapFileScroll();
+    };
+
+    applyFavoriteDocs = () => {
+        startFavoriteDocs();
+        renderFavHosts(config.favoriteDocs);
+        syncFavButtons();
+    };
+
     applyStyleFeatures = () => {
         const root = document.documentElement;
         root.classList.toggle("starter-plain-table-head", config.plainTableHead !== false);
+        root.classList.toggle("starter-hide-tab-new", config.hideTabNewDoc === true);
+        root.classList.toggle("starter-hide-tab-more", config.hideTabSwitch === true);
         root.classList.add("starter-block-line-height");
         root.style.setProperty("--starter-block-line-height", String(config.blockLineHeight));
     };
@@ -1795,6 +2778,8 @@
         applyDocRefFeature();
         applyStyleFeatures();
         applyHideNotebooks();
+        applyRecentDocs();
+        applyFavoriteDocs();
         const okDocks = mountAllDocks();
         const okToggles = mountToggles();
         const okMenu = bindPluginsMenu();
@@ -1829,10 +2814,14 @@
             "starter-custom-doc-ref",
             "starter-plain-table-head",
             "starter-block-line-height",
-            "starter-hide-notebook"
+            "starter-hide-notebook",
+            "starter-hide-tab-new",
+            "starter-hide-tab-more"
         );
         document.documentElement.style.removeProperty("--starter-block-line-height");
         stopHideNotebooks();
+        stopRecentDocs();
+        stopFavoriteDocs();
         stopDocRefs();
         unbindPluginsMenu();
         closeSettingsDialog();

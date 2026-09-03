@@ -1974,6 +1974,8 @@
     const SCROLL_CLASS = "starter-file-scroll";
     const STAR_SVG =
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.1l3.25 6.58 7.26.8-5.48 5.07 1.54 7.23L12 17.2 5.43 20.78l1.54-7.23L1.49 8.48l7.26-.8L12 1.1z"/></svg>';
+    const TREE_TOGGLE_SPACE =
+        '<span class="b3-list-item__toggle"><svg class="b3-list-item__arrow fn__hidden"><use xlink:href="#iconRight"></use></svg></span>';
     const isRecentShown = () => (previewShowRecentDocs ?? config.showRecentDocs) !== false;
     const isFavShown = () => (previewShowFavoriteDocs ?? config.showFavoriteDocs) !== false;
     const getRecentMax = () => (isRecentShown() ? clampListMax(previewRecentMax ?? config.recentDocsMax) : 0);
@@ -2195,6 +2197,7 @@
                     const title = item.title || "无标题";
                     const current = id && id === currentId ? " starter-recent-docs__item--current" : "";
                     return `<li class="b3-list-item${current}" data-node-id="${escapeHtml(id)}" data-starter-recent-doc>
+  ${TREE_TOGGLE_SPACE}
   <span class="b3-list-item__icon">${recentIconInner(item.icon)}</span>
   <span class="b3-list-item__text">${escapeHtml(title)}</span>
 </li>`;
@@ -2629,6 +2632,7 @@
                 const title = item.title || "无标题";
                 const current = id && id === currentId ? " starter-fav-docs__item--current" : "";
                 return `<li class="b3-list-item b3-list-item--hide-action${current}" data-node-id="${escapeHtml(id)}" data-starter-fav-doc>
+  ${TREE_TOGGLE_SPACE}
   <span class="b3-list-item__icon">${recentIconInner(item.icon)}</span>
   <span class="b3-list-item__text">${escapeHtml(title)}</span>
   <span class="b3-list-item__action ariaLabel" data-starter-unfav aria-label="取消收藏">
@@ -2640,6 +2644,7 @@
                 const label = favListExpanded ? "折叠" : `更多（${hidden}）`;
                 rows.push(
                     `<li class="b3-list-item starter-fav-docs__more" data-starter-fav="more">
+  ${TREE_TOGGLE_SPACE}
   <span class="b3-list-item__text">${label}</span>
 </li>`
                 );

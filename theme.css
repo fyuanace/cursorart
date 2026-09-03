@@ -591,7 +591,7 @@ html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > ul > ul > ul > ul 
     flex-direction: column;
     overflow: visible;
     max-height: none;
-    border-bottom: 1px solid var(--b3-border-color);
+    padding-bottom: 10px;
 }
 
 #layouts .sy__file .starter-recent-docs__head,
@@ -609,7 +609,6 @@ html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > ul > ul > ul > ul 
 #layouts .sy__file .starter-recent-docs__list,
 #layouts .sy__file .starter-fav-docs__list {
     overflow: visible;
-    padding-bottom: 4px;
 }
 
 #layouts .sy__file .starter-recent-docs.starter-recent-docs--collapsed .starter-recent-docs__list,

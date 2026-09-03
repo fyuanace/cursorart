@@ -409,21 +409,38 @@
         const cancelText = window.siyuan?.languages?.cancel || "取消";
         const saveText = window.siyuan?.languages?.save || "保存";
 
+        const settingRow = (title, desc, controlHtml) => `<div class="starter-settings-row">
+  <div class="starter-settings-text">
+    <div class="starter-settings-title">${title}</div>
+    ${desc ? `<div class="starter-settings-desc">${desc}</div>` : ""}
+  </div>
+  ${controlHtml ? `<div class="starter-settings-action">${controlHtml}</div>` : ""}
+</div>`;
+        const settingSection = (title, desc, rowsHtml) => `<div class="starter-settings-section">
+  <div class="starter-settings-section__title">${title}</div>
+  ${desc ? `<div class="starter-settings-section__desc">${desc}</div>` : ""}
+  ${rowsHtml}
+</div>`;
+        const switchHtml = (attr, checked) =>
+            `<input class="b3-switch fn__flex-center" type="checkbox" ${attr}${checked}>`;
+        const sliderHtml = (attr, min, max, step, value, valAttr) =>
+            `<div class="fn__flex starter-settings-lh">
+  <input class="b3-slider" type="range" min="${min}" max="${max}" step="${step}" value="${value}" ${attr}>
+  <span class="starter-settings-lh__val" ${valAttr}>${value}</span>
+</div>`;
+
         const rows = tools.length
             ? tools
                   .map(({type, label}) => {
-                      // 开关打开 = 显示（当前可见则为开）
                       const checked = isHiddenType(type) ? "" : " checked";
-                      return `<label class="fn__flex b3-label config-item">
-  <div class="fn__flex-1">
-    ${label}
-    <div class="b3-label__text">data-type: ${type}</div>
-  </div>
-  <input class="b3-switch fn__flex-center" type="checkbox" data-starter-hide-type="${type}"${checked}>
-</label>`;
+                      return settingRow(
+                          label,
+                          `data-type: ${type}`,
+                          switchHtml(`data-starter-hide-type="${type}"`, checked)
+                      );
                   })
                   .join("")
-            : `<div class="b3-label">未检测到侧栏工具图标，请稍后再试。</div>`;
+            : `<div class="starter-settings-empty">未检测到侧栏工具图标，请稍后再试。</div>`;
 
         const docRefChecked = config.customDocRefStyle !== false ? " checked" : "";
         const tableHeadChecked = config.plainTableHead !== false ? " checked" : "";
@@ -451,100 +468,87 @@
       </div>
       <div class="starter-settings-panes">
       <div data-starter-pane="dock" class="starter-settings-pane--active">
-        <div class="b3-label" style="border-bottom:none;padding-bottom:0">
-          侧栏工具显示
-          <div class="b3-label__text">开关打开 = 显示该工具图标；关闭 = 隐藏（仅本主题生效）</div>
-        </div>
-        ${rows}
+        ${settingSection(
+            "侧栏工具",
+            "开关打开 = 显示该工具图标；关闭 = 隐藏（仅本主题生效）",
+            rows
+        )}
+        ${settingSection(
+            "关于",
+            "",
+            settingRow(
+                "配置保存位置",
+                `<span class="starter-settings-path__val">${CONFIG_PATH}</span>`
+            )
+        )}
       </div>
       <div data-starter-pane="style">
-        <label class="fn__flex b3-label config-item">
-          <div class="fn__flex-1">
-            隐藏笔记本
-            <div class="b3-label__text">文件树不显示笔记本名称，其中文档作为第一级列出</div>
-          </div>
-          <input class="b3-switch fn__flex-center" type="checkbox" data-starter-hide-notebook${hideNbChecked}>
-        </label>
-        <label class="fn__flex b3-label config-item">
-          <div class="fn__flex-1">
-            隐藏 Tab 栏新建文档
-            <div class="b3-label__text">藏掉文档 Tab 条上的「+」</div>
-          </div>
-          <input class="b3-switch fn__flex-center" type="checkbox" data-starter-hide-tab-new${hideTabNewChecked}>
-        </label>
-        <label class="fn__flex b3-label config-item">
-          <div class="fn__flex-1">
-            隐藏 Tab 栏页签切换
-            <div class="b3-label__text">藏掉文档 Tab 条右侧的下拉按钮</div>
-          </div>
-          <input class="b3-switch fn__flex-center" type="checkbox" data-starter-hide-tab-switch${hideTabSwitchChecked}>
-        </label>
-        <label class="fn__flex b3-label config-item">
-          <div class="fn__flex-1">
-            显示最近打开
-            <div class="b3-label__text">文件树顶部列出最近打开的文档</div>
-          </div>
-          <input class="b3-switch fn__flex-center" type="checkbox" data-starter-show-recent${showRecentChecked}>
-        </label>
-        <label class="fn__flex b3-label config-item">
-          <div class="fn__flex-1">
-            最近打开条数
-            <div class="b3-label__text">最多显示几条</div>
-          </div>
-          <div class="fn__flex starter-settings-lh">
-            <input class="b3-slider" type="range" min="1" max="32" step="1" value="${recentMax}" data-starter-recent-max>
-            <span class="starter-settings-lh__val" data-starter-recent-max-val>${recentMax}</span>
-          </div>
-        </label>
-        <label class="fn__flex b3-label config-item">
-          <div class="fn__flex-1">
-            显示收藏
-            <div class="b3-label__text">文件树顶部列出收藏的文档；面包屑五角星仍可用来收藏</div>
-          </div>
-          <input class="b3-switch fn__flex-center" type="checkbox" data-starter-show-fav${showFavChecked}>
-        </label>
-        <label class="fn__flex b3-label config-item">
-          <div class="fn__flex-1">
-            收藏条数
-            <div class="b3-label__text">默认显示条数，超出可点「更多」展开</div>
-          </div>
-          <div class="fn__flex starter-settings-lh">
-            <input class="b3-slider" type="range" min="1" max="32" step="1" value="${favMax}" data-starter-fav-max>
-            <span class="starter-settings-lh__val" data-starter-fav-max-val>${favMax}</span>
-          </div>
-        </label>
-        <label class="fn__flex b3-label config-item">
-          <div class="fn__flex-1">
-            链接样式
-            <div class="b3-label__text">开启 = 文档引用显示图标、加粗与下划线；关闭 = 思源原生块引用</div>
-          </div>
-          <input class="b3-switch fn__flex-center" type="checkbox" data-starter-doc-ref-style${docRefChecked}>
-        </label>
-        <label class="fn__flex b3-label config-item">
-          <div class="fn__flex-1">
-            表格表头不加粗
-            <div class="b3-label__text">开启 = 表头与单元格同字重；关闭 = 官方强制加粗</div>
-          </div>
-          <input class="b3-switch fn__flex-center" type="checkbox" data-starter-plain-table-head${tableHeadChecked}>
-        </label>
-        <label class="fn__flex b3-label config-item">
-          <div class="fn__flex-1">
-            块行间距
-            <div class="b3-label__text">正文行高倍数，官方约 1.625</div>
-          </div>
-          <div class="fn__flex starter-settings-lh">
-            <input class="b3-slider" type="range" min="1.2" max="2.6" step="0.05" value="${blockLh}" data-starter-block-lh>
-            <span class="starter-settings-lh__val" data-starter-block-lh-val>${blockLh.toFixed(2)}</span>
-          </div>
-        </label>
+        ${settingSection(
+            "文档树",
+            "",
+            settingRow(
+                "隐藏笔记本",
+                "文件树不显示笔记本名称，其中文档作为第一级列出",
+                switchHtml("data-starter-hide-notebook", hideNbChecked)
+            ) +
+            settingRow(
+                "显示最近打开",
+                "文件树顶部列出最近打开的文档",
+                switchHtml("data-starter-show-recent", showRecentChecked)
+            ) +
+            settingRow(
+                "最近打开条数",
+                "最多显示几条",
+                sliderHtml("data-starter-recent-max", 1, 32, 1, recentMax, "data-starter-recent-max-val")
+            ) +
+            settingRow(
+                "显示收藏",
+                "文件树顶部列出收藏的文档；面包屑五角星仍可用来收藏",
+                switchHtml("data-starter-show-fav", showFavChecked)
+            ) +
+            settingRow(
+                "收藏条数",
+                "默认显示条数，超出可点「更多」展开",
+                sliderHtml("data-starter-fav-max", 1, 32, 1, favMax, "data-starter-fav-max-val")
+            )
+        )}
+        ${settingSection(
+            "Tab 栏",
+            "",
+            settingRow(
+                "隐藏新建文档",
+                "藏掉文档 Tab 条上的「+」",
+                switchHtml("data-starter-hide-tab-new", hideTabNewChecked)
+            ) +
+            settingRow(
+                "隐藏页签切换",
+                "藏掉文档 Tab 条右侧的下拉按钮",
+                switchHtml("data-starter-hide-tab-switch", hideTabSwitchChecked)
+            )
+        )}
+        ${settingSection(
+            "正文",
+            "",
+            settingRow(
+                "链接样式",
+                "开启 = 文档引用显示图标、加粗与下划线；关闭 = 思源原生块引用",
+                switchHtml("data-starter-doc-ref-style", docRefChecked)
+            ) +
+            settingRow(
+                "表格表头不加粗",
+                "开启 = 表头与单元格同字重；关闭 = 官方强制加粗",
+                switchHtml("data-starter-plain-table-head", tableHeadChecked)
+            ) +
+            settingRow(
+                "块行间距",
+                "正文行高倍数，官方约 1.625",
+                sliderHtml("data-starter-block-lh", 1.2, 2.6, 0.05, blockLh.toFixed(2), "data-starter-block-lh-val")
+            )
+        )}
       </div>
-      </div>
-      <div class="b3-label" style="margin-top:8px">
-        配置保存位置
-        <div class="b3-label__text" style="word-break:break-all;user-select:text">${CONFIG_PATH}</div>
       </div>
     </div>
-    <div class="b3-dialog__action">
+    <div class="b3-dialog__action starter-settings-footer">
       <button class="b3-button b3-button--cancel" data-starter-dlg="cancel">${cancelText}</button>
       <div class="fn__space"></div>
       <button class="b3-button b3-button--text" data-starter-dlg="save">${saveText}</button>

@@ -753,7 +753,7 @@ body:not(.body--toolbar-hide) #toolbar .toolbar__item--close {
 }
 
 #starterSettingsDialog .starter-settings-window {
-    width: min(520px, 92vw);
+    width: min(640px, 92vw);
     max-height: 80vh;
 }
 
@@ -762,6 +762,7 @@ body:not(.body--toolbar-hide) #toolbar .toolbar__item--close {
     flex-direction: column;
     overflow: hidden;
     max-height: calc(80vh - 100px);
+    padding: 0;
 }
 
 #starterSettingsDialog .starter-settings-panes {
@@ -769,10 +770,16 @@ body:not(.body--toolbar-hide) #toolbar .toolbar__item--close {
     flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
+    padding: 16px 16px 8px;
 }
 
 #starterSettingsDialog [data-starter-pane] {
     grid-area: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    align-self: start;
+    width: 100%;
 }
 
 #starterSettingsDialog [data-starter-pane]:not(.starter-settings-pane--active) {
@@ -784,25 +791,116 @@ body:not(.body--toolbar-hide) #toolbar .toolbar__item--close {
     display: flex;
     flex-shrink: 0;
     gap: 4px;
-    margin: 0 0 8px;
+    margin: 0;
+    padding: 12px 16px 0;
     border-bottom: 1px solid var(--b3-border-color);
 }
 
 #starterSettingsDialog .starter-settings-tab {
     appearance: none;
     background: transparent;
-    border: none;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
+    border: 0;
+    border-radius: 8px 8px 0 0;
     padding: 8px 14px;
     cursor: pointer;
     color: var(--b3-theme-on-surface);
     font: inherit;
+    font-size: 14px;
+    opacity: 0.72;
+}
+
+#starterSettingsDialog .starter-settings-tab:hover {
+    opacity: 1;
+    background: var(--b3-list-hover);
 }
 
 #starterSettingsDialog .starter-settings-tab--active {
+    opacity: 1;
+    color: var(--b3-theme-primary);
+    box-shadow: inset 0 -2px 0 var(--b3-theme-primary);
+}
+
+#starterSettingsDialog .starter-settings-section {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--b3-border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--b3-theme-surface);
+}
+
+#starterSettingsDialog .starter-settings-section__title {
+    padding: 10px 14px;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--b3-theme-on-surface);
+    background: var(--b3-theme-background);
+    border-bottom: 1px solid var(--b3-border-color);
+}
+
+#starterSettingsDialog .starter-settings-section__desc {
+    padding: 10px 14px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--b3-theme-on-surface-light);
+    background: var(--b3-theme-background);
+    border-bottom: 1px solid var(--b3-border-color);
+}
+
+#starterSettingsDialog .starter-settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 14px;
+}
+
+#starterSettingsDialog .starter-settings-row + .starter-settings-row {
+    border-top: 1px solid var(--b3-border-color);
+}
+
+#starterSettingsDialog .starter-settings-text {
+    min-width: 0;
+    flex: 1;
+}
+
+#starterSettingsDialog .starter-settings-title {
+    font-size: 14px;
     color: var(--b3-theme-on-background);
-    border-bottom-color: var(--b3-theme-primary);
+    line-height: 1.4;
+}
+
+#starterSettingsDialog .starter-settings-desc {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--b3-theme-on-surface);
+    opacity: 0.8;
+    line-height: 1.45;
+    word-break: break-word;
+}
+
+#starterSettingsDialog .starter-settings-action {
+    flex-shrink: 0;
+}
+
+#starterSettingsDialog .starter-settings-empty {
+    padding: 28px 12px;
+    text-align: center;
+    color: var(--b3-theme-on-surface);
+    opacity: 0.7;
+}
+
+#starterSettingsDialog .starter-settings-path__val {
+    display: block;
+    word-break: break-all;
+    user-select: text;
+}
+
+#starterSettingsDialog .starter-settings-footer {
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--b3-border-color);
 }
 
 #starterSettingsDialog .starter-settings-lh {

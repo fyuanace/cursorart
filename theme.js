@@ -1295,6 +1295,53 @@
         return ids;
     };
 
+    const isBlockId = (id) => /^\d{14}-[0-9a-z]+$/i.test(id || "");
+
+    const collectRemoveDocIds = (payload) => {
+        const ids = [];
+        const push = (value) => {
+            if (Array.isArray(value)) {
+                value.forEach(push);
+                return;
+            }
+            if (typeof value === "string") {
+                if (isBlockId(value)) {
+                    ids.push(value);
+                    return;
+                }
+                parsePathIds(value).forEach((id) => ids.push(id));
+            }
+        };
+        push(payload?.ids);
+        push(payload?.id);
+        push(payload?.rootID);
+        const pathIds = parsePathIds(payload?.path || "");
+        if (pathIds.length) {
+            ids.push(pathIds[pathIds.length - 1]);
+        }
+        if (Array.isArray(payload?.paths)) {
+            payload.paths.forEach((p) => {
+                const fromPath = parsePathIds(p);
+                if (fromPath.length) {
+                    ids.push(fromPath[fromPath.length - 1]);
+                }
+            });
+        }
+        return [...new Set(ids.filter(isBlockId))];
+    };
+
+    const docStillExists = async (id) => {
+        if (!isBlockId(id)) {
+            return false;
+        }
+        const pathRes = await postJson("/api/filetree/getPathByID", {id});
+        if (pathRes?.code !== 0) {
+            return false;
+        }
+        const path = typeof pathRes.data === "string" ? pathRes.data : pathRes.data?.path || "";
+        return !!path;
+    };
+
     const openDocById = (id) => {
         if (!id) {
             return;
@@ -2163,12 +2210,47 @@
         }
         treeFocusObs?.disconnect();
         treeFocusHost = host;
-        treeFocusObs = new MutationObserver(() => {
+        treeFocusObs = new MutationObserver((mutations) => {
             if (listNavSource === "fav" || listNavSource === "recent") {
                 clearOfficialTreeFocus();
             }
+            const listed = new Set([
+                ...config.favoriteDocs.map((d) => d.id),
+                ...config.recentDocs.map((d) => d.id),
+            ]);
+            if (!listed.size) {
+                return;
+            }
+            for (const m of mutations) {
+                if (m.type !== "childList") {
+                    continue;
+                }
+                for (const n of m.removedNodes) {
+                    if (!(n instanceof Element)) {
+                        continue;
+                    }
+                    if (n.closest?.(".starter-fav-docs, .starter-recent-docs")) {
+                        continue;
+                    }
+                    const hit =
+                        (n.matches?.("li.b3-list-item[data-node-id]") &&
+                            listed.has(n.getAttribute("data-node-id"))) ||
+                        [...(n.querySelectorAll?.("li.b3-list-item[data-node-id]") || [])].some((li) =>
+                            listed.has(li.getAttribute("data-node-id"))
+                        );
+                    if (hit) {
+                        scheduleSweepMissingListedDocs();
+                        return;
+                    }
+                }
+            }
         });
-        treeFocusObs.observe(host, {subtree: true, attributes: true, attributeFilter: ["class"]});
+        treeFocusObs.observe(host, {
+            subtree: true,
+            childList: true,
+            attributes: true,
+            attributeFilter: ["class"],
+        });
     };
     const stopTreeFocusGuard = () => {
         treeFocusObs?.disconnect();
@@ -2329,6 +2411,10 @@
             renderStoredRecentDocs();
             return;
         }
+        if (!(await docStillExists(id))) {
+            dropListedDocsByIds([id]);
+            return;
+        }
         const item = snapshotDoc(id, hintEl);
         const prev = config.recentDocs[0];
         if (
@@ -2350,6 +2436,158 @@
 
     let pendingRecordId = "";
     let pendingRecordHint = null;
+    let listedDocSweepTimer = 0;
+
+    const dropListedDocsByIds = (ids) => {
+        const gone = new Set((ids || []).filter(isBlockId));
+        if (!gone.size) {
+            return;
+        }
+        if (pendingRecordId && gone.has(pendingRecordId)) {
+            pendingRecordId = "";
+            pendingRecordHint = null;
+            if (recentRecordTimer) {
+                clearTimeout(recentRecordTimer);
+                recentRecordTimer = 0;
+            }
+        }
+        if (listNavId && gone.has(listNavId)) {
+            unpinSidebarLists();
+        }
+        const favNext = config.favoriteDocs.filter((d) => !gone.has(d.id));
+        const recentNext = config.recentDocs.filter((d) => !gone.has(d.id));
+        const favChanged = favNext.length !== config.favoriteDocs.length;
+        const recentChanged = recentNext.length !== config.recentDocs.length;
+        if (!favChanged && !recentChanged) {
+            return;
+        }
+        const patch = {};
+        if (favChanged) {
+            patch.favoriteDocs = favNext;
+        }
+        if (recentChanged) {
+            patch.recentDocs = recentNext;
+        }
+        saveConfigToFile(patch);
+        if (recentChanged) {
+            renderStoredRecentDocs();
+        }
+        if (favChanged) {
+            applyFavoriteDocs();
+            syncFavButtons();
+        }
+    };
+
+    const sweepMissingListedDocs = async () => {
+        const ids = [
+            ...new Set([
+                ...config.favoriteDocs.map((d) => d.id),
+                ...config.recentDocs.map((d) => d.id),
+            ]),
+        ].filter(isBlockId);
+        if (!ids.length) {
+            return;
+        }
+        const checks = await Promise.all(ids.map(async (id) => [id, await docStillExists(id)]));
+        dropListedDocsByIds(checks.filter(([, ok]) => !ok).map(([id]) => id));
+    };
+
+    const scheduleSweepMissingListedDocs = () => {
+        if (listedDocSweepTimer) {
+            clearTimeout(listedDocSweepTimer);
+        }
+        listedDocSweepTimer = setTimeout(() => {
+            listedDocSweepTimer = 0;
+            sweepMissingListedDocs();
+        }, 400);
+    };
+
+    const onKernelWsMain = (e) => {
+        handleKernelPush(e?.detail && typeof e.detail === "object" ? e.detail : e);
+    };
+
+    const handleKernelPush = (msg) => {
+        if (!msg || typeof msg !== "object") {
+            return;
+        }
+        const cmd = msg.cmd;
+        if (cmd === "removeDoc" || cmd === "removeDocs") {
+            dropListedDocsByIds(collectRemoveDocIds(msg.data));
+            scheduleSweepMissingListedDocs();
+            return;
+        }
+        if (cmd === "unmount" || cmd === "removeNotebook" || cmd === "removeBox") {
+            scheduleSweepMissingListedDocs();
+        }
+    };
+
+    const onMainWsMessage = (event) => {
+        let msg = event?.data;
+        if (typeof msg === "string") {
+            try {
+                msg = JSON.parse(msg);
+            } catch (err) {
+                return;
+            }
+        }
+        handleKernelPush(msg);
+    };
+
+    let mainWsHooked = null;
+    let mainWsPoll = 0;
+    const hookMainWs = () => {
+        const sock = window.siyuan?.ws?.ws;
+        if (!sock || sock === mainWsHooked) {
+            return;
+        }
+        mainWsHooked?.removeEventListener?.("message", onMainWsMessage);
+        mainWsHooked = sock;
+        sock.addEventListener("message", onMainWsMessage);
+    };
+    const unhookMainWs = () => {
+        mainWsHooked?.removeEventListener?.("message", onMainWsMessage);
+        mainWsHooked = null;
+        if (mainWsPoll) {
+            clearInterval(mainWsPoll);
+            mainWsPoll = 0;
+        }
+    };
+
+    let nativeFetch = null;
+    const hookFiletreeFetch = () => {
+        if (nativeFetch || typeof window.fetch !== "function") {
+            return;
+        }
+        nativeFetch = window.fetch.bind(window);
+        window.fetch = (input, init) => {
+            const req = nativeFetch(input, init);
+            try {
+                const url = typeof input === "string" ? input : input?.url || "";
+                if (/\/api\/filetree\/removeDoc/i.test(url)) {
+                    let payload = {};
+                    try {
+                        if (typeof init?.body === "string") {
+                            payload = JSON.parse(init.body);
+                        }
+                    } catch (err) {
+                        payload = {};
+                    }
+                    dropListedDocsByIds(collectRemoveDocIds(payload));
+                    scheduleSweepMissingListedDocs();
+                }
+            } catch (err) {
+                /* ignore */
+            }
+            return req;
+        };
+    };
+    const unhookFiletreeFetch = () => {
+        if (nativeFetch) {
+            window.fetch = nativeFetch;
+            nativeFetch = null;
+        }
+    };
+
     let recentRenderTimer = 0;
     let recentPollTimer = 0;
     const scheduleRecord = (id, hintEl) => {
@@ -2399,12 +2637,14 @@
     let recentBusPoll = 0;
     let recentCustomBus = null;
     const bindPluginBuses = () => {
+        hookMainWs();
         const register = window.siyuan?.registerCustomEventBus;
         if (!recentCustomBus && typeof register === "function") {
             try {
                 recentCustomBus = register("cursorart-recent");
                 recentCustomBus?.on?.("switch-protyle", onProtyleRecentDocs);
                 recentCustomBus?.on?.("loaded-protyle-static", onProtyleRecentDocs);
+                recentCustomBus?.on?.("ws-main", onKernelWsMain);
             } catch (err) {
                 recentCustomBus = null;
             }
@@ -2415,6 +2655,7 @@
             }
             p.eventBus.on("switch-protyle", onProtyleRecentDocs);
             p.eventBus.on("loaded-protyle-static", onProtyleRecentDocs);
+            p.eventBus.on("ws-main", onKernelWsMain);
             recentBusBinds.push({bus: p.eventBus});
         });
     };
@@ -2422,10 +2663,12 @@
         recentBusBinds.forEach(({bus}) => {
             bus.off?.("switch-protyle", onProtyleRecentDocs);
             bus.off?.("loaded-protyle-static", onProtyleRecentDocs);
+            bus.off?.("ws-main", onKernelWsMain);
         });
         recentBusBinds.length = 0;
         recentCustomBus?.off?.("switch-protyle", onProtyleRecentDocs);
         recentCustomBus?.off?.("loaded-protyle-static", onProtyleRecentDocs);
+        recentCustomBus?.off?.("ws-main", onKernelWsMain);
         recentCustomBus = null;
         if (recentBusPoll) {
             clearInterval(recentBusPoll);
@@ -2545,6 +2788,11 @@
         }
         recentStarted = true;
         startTreeFocusGuard();
+        hookMainWs();
+        if (!mainWsPoll) {
+            mainWsPoll = setInterval(hookMainWs, 1000);
+        }
+        hookFiletreeFetch();
         document.addEventListener("loaded-protyle-static", onProtyleRecentDocs);
         document.addEventListener("switch-protyle", onProtyleRecentDocs);
         document.addEventListener("pointerdown", onRecentOpenPointer, true);
@@ -2584,6 +2832,7 @@
         });
         recentMountObs.observe(host, {childList: true, subtree: true});
         scheduleRecentDocs(true);
+        scheduleSweepMissingListedDocs();
     };
 
     const stopRecentDocs = () => {
@@ -2592,6 +2841,8 @@
         document.removeEventListener("switch-protyle", onProtyleRecentDocs);
         document.removeEventListener("pointerdown", onRecentOpenPointer, true);
         unbindPluginBuses();
+        unhookMainWs();
+        unhookFiletreeFetch();
         recentActiveObs?.disconnect();
         recentActiveObs = null;
         recentMountObs?.disconnect();
@@ -2607,6 +2858,10 @@
         if (recentPollTimer) {
             clearInterval(recentPollTimer);
             recentPollTimer = 0;
+        }
+        if (listedDocSweepTimer) {
+            clearTimeout(listedDocSweepTimer);
+            listedDocSweepTimer = 0;
         }
         removeRecentHosts();
     };

@@ -21,12 +21,12 @@
 ## 整体架构
 
 - 默认层：亮色 `daylight/theme.css`；暗色 `midnight/theme.css`（思源按模式自动加载）
-- 覆盖层：`theme.css` + 配套插件 `cursorart-tools`（侧栏顶横条 dock；自适应标题栏高度；顶栏左右侧栏显隐；主题设置；大纲跟随正文位置；大纲隐藏文档名与 H1–H6 标记、一级标题加粗；面包屑为文档路径；文档引用显示图标并加粗；文件树最近打开与收藏；顶栏前进按钮后捐赠爱心）
+- 覆盖层：`theme.css` + 配套插件 `cursorart-tools`（侧栏顶横条 dock；自适应标题栏高度；顶栏左右侧栏显隐；主题设置；大纲跟随正文位置；大纲隐藏文档名与 H1–H6 标记、一级标题加粗；面包屑为文档路径；文档引用可显示图标；文件树最近打开与收藏；顶栏前进按钮后捐赠爱心）
 - 分区线颜色：`var(--b3-border-color)`
 - 面板底色：左侧栏 / 顶栏用 chrome（亮 `#f8f8f8` / 暗 `#202020`）；右侧栏与编辑区同色（亮 `#ffffff` / 暗 `#191919`）
 - 自有令牌：`--starter-topbar-height`、`--starter-block-line-height`
 - 设置入口：顶栏 `#barPlugins` 菜单 →「cursor极简工具」（六页签，无保存，逐项即时写入；侧栏仅 cursor极简。见 [design/2026-08-04-theme-settings.md](design/2026-08-04-theme-settings.md)）
 - 文件夹名为 `cursorart`；`theme.json` 的 `name` 必须与文件夹名一致（思源 3.8+ 集市校验）；界面显示名为 cursor极简（`displayName`）
-- 集市介绍：根目录 [README_zh_CN.md](../README_zh_CN.md)（英文 [README.md](../README.md)）；发布约定见 [design/2026-09-04-bazaar-release.md](design/2026-09-04-bazaar-release.md)
+- 集市 / 用户介绍（主题与插件同一份）：[instruction/README.md](instruction/README.md)（英文 [instruction/README_en.md](instruction/README_en.md)）；根目录 README 为集市副本。发布约定见 [design/2026-09-04-bazaar-release.md](design/2026-09-04-bazaar-release.md)
 - 安装目录：工作区 `conf/appearance/themes/cursorart/`（思源当前只从此目录加载主题；**不会**从 `data/themes` 加载）
 - 配置文件：工作区 `data/storage/theme/cursorart/config.json`（配置在 `data/` 下，可随工作区同步；主题 CSS/JS 本身不随云端同步）

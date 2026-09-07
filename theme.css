@@ -425,7 +425,7 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     border-radius: 0;
 }
 
-/* 中栏：藏起官方块级面包屑，文档路径条与右侧按钮同一行、等高居中 */
+/* 中栏：藏起官方块级面包屑，文档路径条吃掉剩余宽度，右侧按钮贴右 */
 #layouts .layout__center .protyle-breadcrumb {
     display: flex;
     flex-wrap: nowrap;
@@ -437,12 +437,21 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     display: none !important;
 }
 
+#layouts .layout__center .protyle-breadcrumb > .protyle-breadcrumb__space {
+    flex: 0 0 0 !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden;
+}
+
 #layouts .layout__center .starter-doc-path {
     display: flex;
     flex-wrap: nowrap !important;
     align-items: center;
     align-self: stretch;
-    flex: 1;
+    flex: 1 1 auto;
+    width: auto;
+    max-width: none;
     min-width: 0;
     height: auto;
     max-height: none;
@@ -453,11 +462,14 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     color: var(--b3-theme-on-surface);
 }
 
+#layouts .layout__center .starter-doc-path span {
+    max-width: none;
+}
+
 #layouts .layout__center .starter-doc-path__item {
-    flex: 0 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex: 0 0 auto;
+    min-width: auto;
+    overflow: visible;
     white-space: nowrap;
     cursor: pointer;
     border-radius: var(--b3-border-radius-s);
@@ -466,12 +478,18 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
 }
 
 #layouts .layout__center .starter-doc-path__item--keep {
-    flex-shrink: 1;
+    flex: 0 0 auto;
 }
 
 #layouts .layout__center .starter-doc-path__item--mid {
-    flex-shrink: 8;
-    min-width: 1.2em;
+    flex: 0 0 auto;
+}
+
+#layouts .layout__center .starter-doc-path--tight .starter-doc-path__item--last {
+    flex: 1 1 auto;
+    min-width: 4em;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 #layouts .layout__center .starter-doc-path__item:hover {

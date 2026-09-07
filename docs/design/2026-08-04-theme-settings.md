@@ -54,6 +54,7 @@ tags: [settings, dock, theme.js]
 | 2026-09-07 | 「关于」独立页签：显示插件/主题版本、复位喜欢按钮、打开配置路径 |
 | 2026-09-07 | 自适应标题栏关闭时才写 `starter-default-topbar`；默认顶栏布局由主题 CSS 直接生效 |
 | 2026-09-07 | 安装默认配置对齐常用组合；关于页增加「恢复默认配置」（保留收藏与最近打开） |
+| 2026-09-07 | 默认开启「链接样式」（`customDocRefStyle` true） |
 | 2026-09-07 | 关于页「支持作者」「复位喜欢」单独成「支持」分组 |
 | 2026-09-07 | 设置对话框固定全屏遮罩与顶层 z-index，换主题也不被顶栏挡住 |
 
@@ -81,7 +82,7 @@ tags: [settings, dock, theme.js]
 
 - 文件：`/data/storage/theme/cursorart/config.json`（工作区，经 `/api/file/getFile` / `putFile`）
 - 内容：布局字段 + 编辑类 `disabled` / `imageScale` / `panguSpacing` / `childDocWidget` / `configSync` / `editorFeaturesMigrated`（见插件 docs）
-- 对话框页签：**侧栏**（`adaptiveTopbarHeight` / `dockInContent` 缺省 `true`；默认隐藏 inbox / bookmark / agentChat；dock 图标显隐仅 cursor极简生效）、**样式**、**关于**（含恢复默认配置）。缺省：`customDocRefStyle` `false`，`plainTableHead` `true`，`blockLineHeight` `1.65`（范围 1.2–2.6），`hideNotebooks` `false`，`hideTabNewDoc` / `hideTabSwitch` `true`，`showRecentDocs` `false`，`showFavoriteDocs` `true`，`recentDocsMax` / `favoriteDocsMax` `8`（范围 1–32），`favoriteDocs` / `recentDocs` `[]`。编辑类缺省：`imageScale` 缩放与居中开启，`panguSpacing` 开启，`childDocWidget` 开启，斜杠 `disabled` 为空。无配置文件时按此写入。关于页「恢复默认配置」写回上述值并重开对话框，**不**清空收藏/最近打开名单；同时把官方 SVG 默认图标与隐藏状态栏设回开启
+- 对话框页签：**侧栏**（`adaptiveTopbarHeight` / `dockInContent` 缺省 `true`；默认隐藏 inbox / bookmark / agentChat；dock 图标显隐仅 cursor极简生效）、**样式**、**关于**（含恢复默认配置）。缺省：`customDocRefStyle` `true`，`plainTableHead` `true`，`blockLineHeight` `1.65`（范围 1.2–2.6），`hideNotebooks` `false`，`hideTabNewDoc` / `hideTabSwitch` `true`，`showRecentDocs` `false`，`showFavoriteDocs` `true`，`recentDocsMax` / `favoriteDocsMax` `8`（范围 1–32），`favoriteDocs` / `recentDocs` `[]`。编辑类缺省：`imageScale` 缩放与居中开启，`panguSpacing` 开启，`childDocWidget` 开启，斜杠 `disabled` 为空。无配置文件时按此写入。关于页「恢复默认配置」写回上述值并重开对话框，**不**清空收藏/最近打开名单；同时把官方 SVG 默认图标与隐藏状态栏设回开启
 - 「默认使用 SVG 图标」不是主题配置项：读写官方 `fileTree.useSVGDefaultIcon`；开关立刻 POST `/api/setting/setFiletree`。当前思源没有该布尔字段时不显示此行
 - 「隐藏底部状态栏」同样立刻写入官方 `appearance.hideStatusBar`
 - 滑杆与开关都即时改界面并写盘；Esc / 点遮罩只关窗不回滚
@@ -117,7 +118,7 @@ tags: [settings, dock, theme.js]
 2b. 切任意页签时外框高度不变（约 80vh）；侧栏等短页无滚动条（底部可留白）；斜杠菜单等长页只在内容区滚动；切页签后滚动位置回到顶部
 3. 换到其它主题后打开设置：页签与卡片仍应正常排版（不依赖 cursor极简 CSS）；对话框应盖住顶栏与侧栏，点遮罩可关闭；侧栏页应提示并禁用；样式与关于仍可操作
 3b. 关于页签应显示版本、「支持」分组（支持作者、复位喜欢）、「维护」分组（恢复默认、配置路径及「打开」）；侧栏页不应再出现这些项
-3c. 删掉 `config.json` 后重载：应写入默认（隐藏 inbox/bookmark/agentChat、关链接样式、隐藏 Tab +/下拉、关最近打开、开收藏、行高 1.65、图片缩放/居中与输入者开启）。关于页点「恢复默认」并确认：上述开关回到默认，收藏名单仍在；对话框重开后开关与默认一致
+3c. 删掉 `config.json` 后重载：应写入默认（隐藏 inbox/bookmark/agentChat、开链接样式、隐藏 Tab +/下拉、关最近打开、开收藏、行高 1.65、图片缩放/居中与输入者开启）。关于页点「恢复默认」并确认：上述开关回到默认，收藏名单仍在；对话框重开后开关与默认一致
 4. 打开设置，关闭「标签」「收集箱」等开关并保存 → 对应侧栏图标消失
 5. 再打开设置打开开关并保存 → 图标恢复
 6. 切换主题离开 starter → 隐藏样式与菜单挂钩应被 `destroyTheme` 清掉

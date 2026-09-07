@@ -20,6 +20,9 @@ tags: [bazaar, readme]
 | 2026-09-07 | 发布 v2.0.2：`icon` 用 ≤64KB 的 `icon.png`；补 `LICENSE`；说明新主题禁止 `theme.js` |
 | 2026-09-07 | 发布 v2.0.3：主题去 `theme.js`；交互迁至配套插件 `fyuanace/cursorart-tools` |
 | 2026-09-07 | 发布 v2.0.5：自适应标题栏高度改为可开关；设置对话框 CSS 移出主题 |
+| 2026-09-07 | 主题与插件共用一份用户介绍；亮色 / 暗色预览换成当前界面截图 |
+| 2026-09-07 | 用户介绍截图改到 `image/`；集市卡片仍用根目录 `preview.png` |
+| 2026-09-07 | 集市卡片与详情开篇改为 Cursor/Notion 风格简介，并强调插件与主题一起用 |
 
 ## 背景信息
 
@@ -34,9 +37,9 @@ tags: [bazaar, readme]
 
 ## 当前方案
 
-- 集市详情用根目录 `README.md`（英文）与 `README_zh_CN.md`（中文）
-- 列表图标 `icon.png`（160×160，≤64KB）、卡片预览 `preview.png`（1024×768，≤512KB）；功能截图放在 `preview/`
-- `theme.json` 的 `name` 与文件夹 / 仓库名 `cursorart` 一致；`url` 为 GitHub 仓库地址；当前版本 `2.0.5`
+- 集市详情用根目录 `README.md`（英文）与 `README_zh_CN.md`（中文），与插件介绍同一份文案；正文源在 `docs/instruction/`
+- 列表图标 `icon.png`（160×160，≤64KB）、卡片预览 `preview.png`（用亮色全界面截图，留在仓库根）；介绍正文截图在 `image/`（含亮 / 暗预览 `image/light.png`、`image/dark.png`）
+- `theme.json` 的 `name` 与文件夹 / 仓库名 `cursorart` 一致；`url` 为 GitHub 仓库地址；当前版本 `2.0.8`
 - 仓库根有 `LICENSE`（MIT）
 - 交互能力在独立插件仓库 `fyuanace/cursorart-tools`（集市 `plugins.txt` 另 PR）
 - 主题 `package.zip` **不含** `theme.js`
@@ -44,7 +47,8 @@ tags: [bazaar, readme]
 ## 其他模块引用约束
 
 - 不要把 `docs/README.md` 改成集市文案（那是给开发者的模块地图）
-- 截图相对路径写 `preview/...`，以便打包进 `package.zip` 后离线也能看
+- 介绍截图相对路径写 `image/...`（`docs/instruction/` 里写 `../../image/...`），以便打包进 `package.zip` 后离线也能看
+- 集市列表卡片仍用根目录 `preview.png`，不要改成 `image/` 路径
 - 勿把 `cursor-app-icon.png`（>64KB）写进清单 `icon` 字段
 
 ## 工程师测试验收方法

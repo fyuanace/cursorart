@@ -10,6 +10,7 @@
  * 8) 指向文档的块引用显示文档图标并加粗（不改标题/段落引用）
  * 9) 文件树顶部「最近打开」区块
  * 10) 面包屑收藏按钮 + 文件树「收藏」区块
+ * 11) 顶栏前进按钮后捐赠爱心：点开支持页并计数；同电脑名点过即隐藏，换电脑名或复位后再出现
  */
 (function () {
     /** 截图/屏幕上量到的标题栏高度（设备像素），不含路径条 */
@@ -26,6 +27,10 @@
     const HIDE_STYLE_ID = "starterHideDockStyle";
     const DIALOG_ID = "starterSettingsDialog";
     const MENU_ITEM_ID = "starter-theme-settings";
+    const DONATE_HEART_ID = "starterDonateHeart";
+    const DONATE_FLAG_KEY = "cursorart-donate-clicked";
+    const DONATE_HOST_KEY = "cursorart-donate-clicked-host";
+    const DONATE_PAGE_URL = "https://siyuan.ysoft.site";
 
     const sides = [
         {
@@ -97,7 +102,7 @@
         return out;
     };
 
-    /** @type {{ hiddenDockTypes: string[], customDocRefStyle: boolean, plainTableHead: boolean, blockLineHeight: number, hideNotebooks: boolean, hideTabNewDoc: boolean, hideTabSwitch: boolean, showRecentDocs: boolean, showFavoriteDocs: boolean, recentDocsMax: number, favoriteDocsMax: number, favoriteDocs: {id: string, title: string, icon: string}[], recentDocs: {id: string, title: string, icon: string}[] }} */
+    /** @type {{ hiddenDockTypes: string[], customDocRefStyle: boolean, plainTableHead: boolean, blockLineHeight: number, hideNotebooks: boolean, hideTabNewDoc: boolean, hideTabSwitch: boolean, showRecentDocs: boolean, showFavoriteDocs: boolean, recentDocsMax: number, favoriteDocsMax: number, favoriteDocs: {id: string, title: string, icon: string}[], recentDocs: {id: string, title: string, icon: string}[], seededOfficialDefaults: boolean }} */
     let config = {
         hiddenDockTypes: [],
         customDocRefStyle: true,
@@ -112,18 +117,36 @@
         favoriteDocsMax: DEFAULT_FAV_MAX,
         favoriteDocs: [],
         recentDocs: [],
+        seededOfficialDefaults: false,
     };
     let applyDocRefFeature = () => {};
     let applyStyleFeatures = () => {};
     let applyHideNotebooks = () => {};
     let applyRecentDocs = () => {};
     let applyFavoriteDocs = () => {};
+    let applySvgDefaultIcons = () => {};
     let syncFavButtons = () => {};
     /** 设置对话框拖动时的临时条数/显隐；null 表示用已保存配置 */
     let previewRecentMax = null;
     let previewFavoriteMax = null;
     let previewShowRecentDocs = null;
     let previewShowFavoriteDocs = null;
+    /** 设置对话框里对官方 useSVGDefaultIcon / hideStatusBar 的预览；null 表示用思源当前值 */
+    let previewUseSvgDefault = null;
+    let previewHideStatusBar = null;
+
+    const supportsOfficialSvgDefault = () =>
+        typeof window.siyuan?.config?.fileTree?.useSVGDefaultIcon === "boolean";
+
+    const officialSvgDefaultOn = () => window.siyuan?.config?.fileTree?.useSVGDefaultIcon === true;
+
+    const useSvgDefaultIcon = () =>
+        (previewUseSvgDefault ?? window.siyuan?.config?.fileTree?.useSVGDefaultIcon) === true;
+
+    const supportsOfficialHideStatusBar = () =>
+        typeof window.siyuan?.config?.appearance?.hideStatusBar === "boolean";
+
+    const officialHideStatusBarOn = () => window.siyuan?.config?.appearance?.hideStatusBar === true;
 
     /** 每侧记住上一次选中的 dock type（展开时用） */
     const lastType = {
@@ -158,6 +181,7 @@
             favoriteDocsMax: favMeta.max,
             favoriteDocs: normalizeFavoriteDocs(parsed?.favoriteDocs),
             recentDocs: normalizeFavoriteDocs(parsed?.recentDocs).slice(0, recentMeta.max),
+            seededOfficialDefaults: parsed?.seededOfficialDefaults === true,
         };
     };
 
@@ -449,9 +473,27 @@
         const hideTabSwitchChecked = config.hideTabSwitch === true ? " checked" : "";
         const showRecentChecked = config.showRecentDocs !== false ? " checked" : "";
         const showFavChecked = config.showFavoriteDocs !== false ? " checked" : "";
+        const svgDefaultChecked = officialSvgDefaultOn() ? " checked" : "";
         const blockLh = clampBlockLh(config.blockLineHeight);
         const recentMax = Math.max(1, clampListMax(config.recentDocsMax));
         const favMax = Math.max(1, clampListMax(config.favoriteDocsMax));
+        const svgDefaultTitle = window.siyuan?.languages?.useSVGDefaultIcon || "默认使用 SVG 图标";
+        const svgDefaultRow = supportsOfficialSvgDefault()
+            ? settingRow(
+                  svgDefaultTitle,
+                  "与思源「设置 → 文档树」里的同名开关是同一个；打开后未设图标的文档用线框 SVG，关闭则用 emoji",
+                  switchHtml("data-starter-svg-default", svgDefaultChecked)
+              )
+            : "";
+        const hideStatusChecked = officialHideStatusBarOn() ? " checked" : "";
+        const hideStatusTitle = window.siyuan?.languages?.appearance16 || "隐藏底部状态栏";
+        const hideStatusRow = supportsOfficialHideStatusBar()
+            ? settingRow(
+                  hideStatusTitle,
+                  "与思源「设置 → 外观」里的同名开关是同一个；只控制整条状态栏显隐，不改里面显示哪些",
+                  switchHtml("data-starter-hide-status", hideStatusChecked)
+              )
+            : "";
 
         const dialog = document.createElement("div");
         dialog.id = DIALOG_ID;
@@ -477,6 +519,11 @@
             "关于",
             "",
             settingRow(
+                "复位喜欢按钮",
+                "清掉本机电脑名下的「已点过爱心」记录，顶栏重新显示爱心。换电脑或电脑名变化也会再出现",
+                `<button type="button" class="b3-button b3-button--outline" data-starter-dlg="reset-donate">复位</button>`
+            ) +
+            settingRow(
                 "配置保存位置",
                 `<span class="starter-settings-path__val">${CONFIG_PATH}</span>`
             )
@@ -486,6 +533,7 @@
         ${settingSection(
             "文档树",
             "",
+            svgDefaultRow +
             settingRow(
                 "隐藏笔记本",
                 "文件树不显示笔记本名称，其中文档作为第一级列出",
@@ -512,6 +560,7 @@
                 sliderHtml("data-starter-fav-max", 1, 32, 1, favMax, "data-starter-fav-max-val")
             )
         )}
+        ${hideStatusRow ? settingSection("界面", "", hideStatusRow) : ""}
         ${settingSection(
             "Tab 栏",
             "",
@@ -561,11 +610,15 @@
             previewFavoriteMax = null;
             previewShowRecentDocs = null;
             previewShowFavoriteDocs = null;
+            previewUseSvgDefault = null;
+            previewHideStatusBar = null;
             if (revert) {
                 applyStyleFeatures();
                 applyHideNotebooks();
                 applyRecentDocs();
                 applyFavoriteDocs();
+                applySvgDefaultIcons();
+                applyHideStatusBar(officialHideStatusBarOn());
             }
             dialog.removeEventListener("click", onClick);
             document.removeEventListener("keydown", onKey, true);
@@ -579,6 +632,12 @@
             const act = t.getAttribute("data-starter-dlg");
             if (act === "scrim" || act === "cancel") {
                 onClose(true);
+                return;
+            }
+            if (act === "reset-donate") {
+                e.preventDefault();
+                resetDonateHeart();
+                t.textContent = "已复位";
                 return;
             }
             if (act === "tab") {
@@ -616,26 +675,42 @@
                 previewFavoriteMax = null;
                 previewShowRecentDocs = null;
                 previewShowFavoriteDocs = null;
-                saveConfigToFile({
-                    hiddenDockTypes: hidden,
-                    customDocRefStyle,
-                    plainTableHead,
-                    hideNotebooks,
-                    hideTabNewDoc,
-                    hideTabSwitch,
-                    showRecentDocs,
-                    showFavoriteDocs,
-                    blockLineHeight,
-                    recentDocsMax,
-                    favoriteDocsMax,
-                    recentDocs: normalizeFavoriteDocs(config.recentDocs).slice(0, recentDocsMax),
-                }).then((ok) => {
+                const svgInput = dialog.querySelector("[data-starter-svg-default]");
+                const statusInput = dialog.querySelector("[data-starter-hide-status]");
+                const saveSvg = svgInput
+                    ? persistOfficialSvgDefault(!!svgInput.checked)
+                    : Promise.resolve(true);
+                const saveStatus = statusInput
+                    ? persistOfficialHideStatusBar(!!statusInput.checked)
+                    : Promise.resolve(true);
+                previewUseSvgDefault = null;
+                previewHideStatusBar = null;
+                Promise.all([
+                    saveConfigToFile({
+                        hiddenDockTypes: hidden,
+                        customDocRefStyle,
+                        plainTableHead,
+                        hideNotebooks,
+                        hideTabNewDoc,
+                        hideTabSwitch,
+                        showRecentDocs,
+                        showFavoriteDocs,
+                        blockLineHeight,
+                        recentDocsMax,
+                        favoriteDocsMax,
+                        recentDocs: normalizeFavoriteDocs(config.recentDocs).slice(0, recentDocsMax),
+                    }),
+                    saveSvg,
+                    saveStatus,
+                ]).then(([ok]) => {
                     applyHiddenDockTypes();
                     applyDocRefFeature();
                     applyStyleFeatures();
                     applyHideNotebooks();
                     applyRecentDocs();
                     applyFavoriteDocs();
+                    applySvgDefaultIcons();
+                    applyHideStatusBar(officialHideStatusBarOn());
                     onClose();
                     if (!ok && window.siyuan?.languages) {
                         /* 失败已 console.warn；仍关闭对话框以免卡死 */
@@ -664,6 +739,14 @@
         });
         dialog.querySelector("[data-starter-plain-table-head]")?.addEventListener("change", (e) => {
             document.documentElement.classList.toggle("starter-plain-table-head", !!e.target.checked);
+        });
+        dialog.querySelector("[data-starter-svg-default]")?.addEventListener("change", (e) => {
+            previewUseSvgDefault = !!e.target.checked;
+            applySvgDefaultIcons();
+        });
+        dialog.querySelector("[data-starter-hide-status]")?.addEventListener("change", (e) => {
+            previewHideStatusBar = !!e.target.checked;
+            applyHideStatusBar(previewHideStatusBar);
         });
         dialog.querySelector("[data-starter-hide-notebook]")?.addEventListener("change", (e) => {
             const on = !!e.target.checked;
@@ -895,6 +978,165 @@
     };
 
     const mountAllDocks = () => sides.every((side) => mountOne(side));
+
+    const getPcName = () => {
+        try {
+            const req = window.require;
+            if (typeof req === "function") {
+                const hostname = req("os")?.hostname?.();
+                if (hostname) {
+                    return String(hostname);
+                }
+            }
+        } catch {
+            /* 非 Electron 走思源设备名 */
+        }
+        try {
+            const name = window.siyuan?.config?.system?.name;
+            if (name) {
+                return String(name);
+            }
+        } catch {
+            /* 无设备名则视为未点过 */
+        }
+        return "";
+    };
+
+    const migrateDonateFlag = () => {
+        try {
+            if (localStorage.getItem(DONATE_FLAG_KEY) !== "1") {
+                return;
+            }
+            const pc = getPcName();
+            if (pc) {
+                localStorage.setItem(DONATE_HOST_KEY, pc);
+            }
+            localStorage.removeItem(DONATE_FLAG_KEY);
+        } catch {
+            /* 无痕模式忽略 */
+        }
+    };
+
+    const hasClickedDonate = () => {
+        migrateDonateFlag();
+        const pc = getPcName();
+        if (!pc) {
+            return false;
+        }
+        try {
+            return localStorage.getItem(DONATE_HOST_KEY) === pc;
+        } catch {
+            return false;
+        }
+    };
+
+    const markDonateClicked = () => {
+        const pc = getPcName();
+        try {
+            if (pc) {
+                localStorage.setItem(DONATE_HOST_KEY, pc);
+            }
+            localStorage.removeItem(DONATE_FLAG_KEY);
+        } catch {
+            /* 无痕模式仍尽量打开页面 */
+        }
+    };
+
+    const unmountDonateHeart = () => {
+        document.getElementById(DONATE_HEART_ID)?.remove();
+    };
+
+    const openDonateInBrowser = (url) => {
+        try {
+            const req = window.require;
+            if (typeof req === "function") {
+                const shell = req("electron").shell;
+                if (shell && typeof shell.openExternal === "function") {
+                    return Promise.resolve(shell.openExternal(url)).then(
+                        () => true,
+                        () => {
+                            window.open(url, "_blank");
+                            return true;
+                        }
+                    );
+                }
+            }
+        } catch {
+            /* 走 window.open */
+        }
+        window.open(url, "_blank");
+        return Promise.resolve(true);
+    };
+
+    const onDonateHeartClick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const heart = document.getElementById(DONATE_HEART_ID);
+        if (heart?.dataset.starterOpening === "1") {
+            return;
+        }
+        if (heart) {
+            heart.dataset.starterOpening = "1";
+        }
+        const url = `${DONATE_PAGE_URL}/?from=theme`;
+        Promise.resolve(openDonateInBrowser(url)).finally(() => {
+            markDonateClicked();
+            unmountDonateHeart();
+        });
+    };
+
+    /** 顶栏 #barForward（前进）之后、文档 Tab 之前；点过则不再插入 */
+    const mountDonateHeart = () => {
+        if (hasClickedDonate()) {
+            unmountDonateHeart();
+            return true;
+        }
+        const barForward = document.getElementById("barForward");
+        const drag = document.getElementById("drag");
+        const toolbar = document.getElementById("toolbar");
+        const existing = document.getElementById(DONATE_HEART_ID);
+        if (existing && barForward && existing.previousElementSibling === barForward) {
+            return true;
+        }
+        if (existing) {
+            existing.remove();
+        }
+        if (!toolbar || (!barForward && !drag)) {
+            return false;
+        }
+
+        const heart = document.createElement("div");
+        heart.id = DONATE_HEART_ID;
+        heart.className = "toolbar__item ariaLabel";
+        heart.setAttribute("aria-label", "喜欢 cursor极简");
+        heart.setAttribute("role", "button");
+        heart.setAttribute("tabindex", "0");
+        heart.style.webkitAppRegion = "no-drag";
+        heart.innerHTML = '<svg class="ft__pink"><use xlink:href="#iconHeart"></use></svg>';
+        heart.addEventListener("click", onDonateHeartClick);
+        heart.addEventListener("keydown", (ev) => {
+            if (ev.key === "Enter" || ev.key === " ") {
+                onDonateHeartClick(ev);
+            }
+        });
+        if (barForward) {
+            barForward.insertAdjacentElement("afterend", heart);
+        } else {
+            toolbar.insertBefore(heart, drag);
+        }
+        return true;
+    };
+
+    const resetDonateHeart = () => {
+        try {
+            localStorage.removeItem(DONATE_FLAG_KEY);
+            localStorage.removeItem(DONATE_HOST_KEY);
+        } catch {
+            /* 无痕模式仍尽量重新挂上 */
+        }
+        unmountDonateHeart();
+        return mountDonateHeart();
+    };
 
     /** 大纲跟随：视口顶部附近的标题 → 官方 Outline.setCurrent */
     const OUTLINE_FOLLOW_TOP_SLOP = 8;
@@ -1277,6 +1519,83 @@
         return res.json();
     };
 
+    const persistOfficialSvgDefault = async (on) => {
+        const ft = window.siyuan?.config?.fileTree;
+        if (!ft || typeof ft.useSVGDefaultIcon !== "boolean") {
+            return true;
+        }
+        if (ft.useSVGDefaultIcon === on) {
+            return true;
+        }
+        try {
+            const res = await postJson("/api/setting/setFiletree", {...ft, useSVGDefaultIcon: on});
+            if (res?.code !== 0) {
+                console.warn("[starter] 写入思源 useSVGDefaultIcon 失败", res);
+                return false;
+            }
+            if (res.data && typeof res.data === "object") {
+                window.siyuan.config.fileTree = res.data;
+            } else {
+                ft.useSVGDefaultIcon = on;
+            }
+            return true;
+        } catch (e) {
+            console.warn("[starter] 写入思源 useSVGDefaultIcon 失败", e);
+            return false;
+        }
+    };
+
+    const applyHideStatusBar = (hidden) => {
+        document.getElementById("status")?.classList.toggle("fn__none", !!hidden);
+        const layoutElement = window.siyuan?.layout?.layout?.children?.[0]?.element;
+        if (!(layoutElement instanceof HTMLElement)) {
+            return;
+        }
+        layoutElement.style.marginBottom = hidden ? "var(--b3-layout-space)" : "";
+    };
+
+    const persistOfficialHideStatusBar = async (hidden) => {
+        const ap = window.siyuan?.config?.appearance;
+        if (!ap || typeof ap.hideStatusBar !== "boolean") {
+            return true;
+        }
+        if (ap.hideStatusBar === hidden) {
+            applyHideStatusBar(hidden);
+            return true;
+        }
+        try {
+            const res = await postJson("/api/setting/setAppearance", {...ap, hideStatusBar: hidden});
+            if (res?.code !== 0) {
+                console.warn("[starter] 写入思源 hideStatusBar 失败", res);
+                return false;
+            }
+            ap.hideStatusBar = hidden;
+            applyHideStatusBar(hidden);
+            return true;
+        } catch (e) {
+            console.warn("[starter] 写入思源 hideStatusBar 失败", e);
+            return false;
+        }
+    };
+
+    const seedOfficialDefaultsIfNeeded = async () => {
+        if (config.seededOfficialDefaults) {
+            return;
+        }
+        const jobs = [];
+        if (supportsOfficialSvgDefault()) {
+            jobs.push(persistOfficialSvgDefault(true));
+        }
+        if (supportsOfficialHideStatusBar()) {
+            jobs.push(persistOfficialHideStatusBar(true));
+        }
+        if (jobs.length) {
+            await Promise.all(jobs);
+        }
+        await saveConfigToFile({seededOfficialDefaults: true});
+        applySvgDefaultIcons();
+    };
+
     const escapeHtml = (s) =>
         String(s)
             .replace(/&/g, "&amp;")
@@ -1562,6 +1881,8 @@
     const DOC_REF_SEL =
         ".b3-typography span[data-type~='block-ref'][data-id], " +
         "#layouts .layout__center .protyle-wysiwyg span[data-type~='block-ref'][data-id]";
+    const DOC_REF_SKIP_HOST = "[custom-fhelper-child-nav]";
+    const DOC_REF_NOT = `:not(.av__celltext):not(${DOC_REF_SKIP_HOST} *)`;
     const DOC_REF_STYLE_ID = "starterDocRefStyle";
     const DOC_REF_LEAK_RE = /\{:[^}]*--starter-doc-ref-[^}]*\}/g;
     const DOC_REF_CLASSES = [
@@ -1572,7 +1893,7 @@
     ];
     const docRefCache = new Map();
     const docRefInflight = new Map();
-    /** @type {Map<string, {kind: "skip"|"icon"|"img", glyph?: string, src?: string}>} */
+    /** @type {Map<string, {kind: "skip"|"icon"|"img"|"svg", glyph?: string, src?: string, svgId?: string}>} */
     const docRefPainted = new Map();
     let docRefObs = null;
     let docRefTimer = 0;
@@ -1599,18 +1920,106 @@
         return hexToEmoji(raw) || "📄";
     };
 
-    const loadDocRefMeta = (id) => {
-        if (docRefCache.has(id)) {
+    const FILE_TREE_SVG_IDS = {
+        file: "iconFile",
+        folder: "iconFileText",
+        notebook: "iconNotebook",
+    };
+
+    const defaultFileSvgId = (kind) => FILE_TREE_SVG_IDS[kind] || FILE_TREE_SVG_IDS.file;
+
+    const svgUseHTML = (svgId) => {
+        const id = String(svgId || FILE_TREE_SVG_IDS.file).replace(/"/g, "");
+        return `<svg><use xlink:href="#${id}"></use></svg>`;
+    };
+
+    const defaultEmojiForKind = (kind) => {
+        const images = window.siyuan?.storage?.["local-images"] || {};
+        if (kind === "notebook") {
+            return images.note || "1f5c3";
+        }
+        if (kind === "folder") {
+            return images.folder || "1f4d1";
+        }
+        return images.file || "1f4c4";
+    };
+
+    const defaultIconHTML = (kind) => {
+        if (useSvgDefaultIcon()) {
+            return svgUseHTML(defaultFileSvgId(kind));
+        }
+        return hexToEmoji(defaultEmojiForKind(kind)) || defaultDocGlyph();
+    };
+
+    const refreshOfficialDefaultTreeIcons = () => {
+        document.querySelectorAll("#layouts .sy__file ul[data-url] [data-default-icon]").forEach((li) => {
+            const kind = li.getAttribute("data-default-icon");
+            if (kind !== "file" && kind !== "folder" && kind !== "notebook") {
+                return;
+            }
+            const wrap = Array.from(li.children).find(
+                (el) =>
+                    el.classList.contains("b3-list-item__icon") || el.classList.contains("b3-list-item__graphic")
+            );
+            if (!wrap) {
+                return;
+            }
+            wrap.innerHTML = defaultIconHTML(kind);
+        });
+    };
+
+    const svgSymbolDataUri = (svgId) => {
+        const symbol = document.getElementById(svgId);
+        if (!symbol) {
+            return "";
+        }
+        const viewBox = symbol.getAttribute("viewBox") || "0 0 32 32";
+        const dims = String(viewBox).split(/[\s,]+/).map(Number);
+        const vbSize = dims[2] || 32;
+        const strokeW = Math.max(vbSize / 18, 1.25);
+        const inner = String(symbol.innerHTML)
+            .replace(/\sfill="[^"]*"/gi, "")
+            .replace(/\sstroke="[^"]*"/gi, "")
+            .replace(/\sstroke-width="[^"]*"/gi, "");
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" fill="none" stroke="#000" stroke-width="${strokeW}" stroke-linejoin="round" stroke-linecap="round">${inner}</svg>`;
+        return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+    };
+
+    const isStockFileGlyph = (icon) => {
+        const v = (icon || "").trim();
+        if (!v) {
+            return true;
+        }
+        const raw = String(window.siyuan?.storage?.["local-images"]?.file || "1f4c4");
+        if (v === raw || v.toLowerCase() === raw.toLowerCase()) {
+            return true;
+        }
+        const emoji = hexToEmoji(raw);
+        return v === "📄" || v === "1f4c4" || !!(emoji && v === emoji);
+    };
+
+    const officialTreeItem = (id) => {
+        if (!id) {
+            return null;
+        }
+        return document.querySelector(`#layouts .sy__file ul[data-url] .b3-list-item[data-node-id="${id}"]`);
+    };
+
+    const loadDocRefMeta = (id, opts) => {
+        const forceApi = !!opts?.forceApi;
+        if (!forceApi && docRefCache.has(id)) {
             return Promise.resolve(docRefCache.get(id));
         }
-        if (docRefInflight.has(id)) {
+        if (!forceApi && docRefInflight.has(id)) {
             return docRefInflight.get(id);
         }
         const job = (async () => {
-            const tree = metaFromFileTree(id);
-            if (tree) {
-                docRefCache.set(id, tree);
-                return tree;
+            if (!forceApi) {
+                const tree = metaFromFileTree(id);
+                if (tree) {
+                    docRefCache.set(id, tree);
+                    return tree;
+                }
             }
             const res = await postJson("/api/block/getBlockInfo", {id});
             const isDoc = res?.code === 0 && res.data?.rootID === id;
@@ -1619,11 +2028,15 @@
             return meta;
         })();
         docRefInflight.set(id, job);
-        return job.finally(() => docRefInflight.delete(id));
+        return job.finally(() => {
+            if (docRefInflight.get(id) === job) {
+                docRefInflight.delete(id);
+            }
+        });
     };
 
     const metaFromFileTree = (id) => {
-        const li = document.querySelector(`#layouts .sy__file .b3-list-item[data-node-id="${id}"]`);
+        const li = officialTreeItem(id);
         if (!li) {
             return null;
         }
@@ -1636,6 +2049,13 @@
         if (src.includes("api/icon")) {
             return {isDoc: true, icon: src.replace(/^https?:\/\/[^/]+/, "").replace(/^\//, "")};
         }
+        const useEl = wrap?.querySelector("use");
+        if (useEl) {
+            const href = useEl.getAttribute("href") || useEl.getAttribute("xlink:href") || "";
+            const svgId = href.replace(/^#/, "");
+            const defaultKind = li.getAttribute("data-default-icon") || "";
+            return {isDoc: true, icon: "", svgId, defaultKind};
+        }
         const emoji = wrap?.textContent?.trim() || "";
         return {isDoc: true, icon: emoji};
     };
@@ -1647,6 +2067,9 @@
                 return;
             }
             if (span.classList.contains("av__celltext") || span.closest(".code-block, .hljs")) {
+                return;
+            }
+            if (span.closest(DOC_REF_SKIP_HOST)) {
                 return;
             }
             if (!span.getAttribute("data-id")) {
@@ -1677,8 +2100,8 @@
             .flatMap((id) => {
                 const e = escCssId(id);
                 return [
-                    `html.starter-custom-doc-ref .b3-typography span[data-type~="block-ref"][data-id="${e}"]:not(.av__celltext)${pseudo}`,
-                    `html.starter-custom-doc-ref .protyle-wysiwyg [data-node-id] span[data-type~="block-ref"][data-id="${e}"]:not(.av__celltext)${pseudo}`,
+                    `html.starter-custom-doc-ref .b3-typography span[data-type~="block-ref"][data-id="${e}"]${DOC_REF_NOT}${pseudo}`,
+                    `html.starter-custom-doc-ref .protyle-wysiwyg [data-node-id] span[data-type~="block-ref"][data-id="${e}"]${DOC_REF_NOT}${pseudo}`,
                 ];
             })
             .join(",\n");
@@ -1694,13 +2117,28 @@
                 : `/emojis/${icon}`;
             return {kind: "img", src};
         }
-        return {kind: "icon", glyph: glyphFromIcon(icon)};
+        if (icon) {
+            return {kind: "icon", glyph: glyphFromIcon(icon)};
+        }
+        if (useSvgDefaultIcon()) {
+            const svgId = meta.svgId || defaultFileSvgId(meta.defaultKind || "file");
+            if (document.getElementById(svgId)) {
+                return {kind: "svg", svgId};
+            }
+        }
+        return {kind: "icon", glyph: defaultDocGlyph()};
     };
 
     const rememberDocRef = (id, meta) => {
         const next = metaToPaint(meta);
         const prev = docRefPainted.get(id);
-        if (prev && prev.kind === next.kind && prev.glyph === next.glyph && prev.src === next.src) {
+        if (
+            prev &&
+            prev.kind === next.kind &&
+            prev.glyph === next.glyph &&
+            prev.src === next.src &&
+            prev.svgId === next.svgId
+        ) {
             return false;
         }
         docRefPainted.set(id, next);
@@ -1718,6 +2156,7 @@
         const docs = [];
         const icons = new Map();
         const imgs = new Map();
+        const svgs = new Map();
         for (const [id, info] of docRefPainted) {
             if (info.kind === "skip") {
                 skips.push(id);
@@ -1728,6 +2167,10 @@
                 const list = icons.get(info.glyph) || [];
                 list.push(id);
                 icons.set(info.glyph, list);
+            } else if (info.kind === "svg" && info.svgId) {
+                const list = svgs.get(info.svgId) || [];
+                list.push(id);
+                svgs.set(info.svgId, list);
             } else if (info.src) {
                 const list = imgs.get(info.src) || [];
                 list.push(id);
@@ -1795,6 +2238,32 @@
     background: url("${url}") center / contain no-repeat;
 }`);
         }
+        for (const [svgId, ids] of svgs) {
+            const uri = svgSymbolDataUri(svgId);
+            if (!uri) {
+                const glyph = defaultDocGlyph();
+                parts.push(`${docRefSels(ids, "::before")} {
+    content: ${cssContent(glyph)};
+    font-weight: 400;
+    font-family: var(--b3-font-family-emoji);
+    line-height: 1;
+    text-align: center;
+    speak: never;
+}`);
+                continue;
+            }
+            parts.push(`${docRefSels(ids, "::before")} {
+    content: "";
+    width: 1.05em;
+    height: 1.05em;
+    background-color: currentColor;
+    background-image: none;
+    -webkit-mask: ${uri} center / contain no-repeat;
+    mask: ${uri} center / contain no-repeat;
+    -webkit-mask-mode: alpha;
+    mask-mode: alpha;
+}`);
+        }
         el.textContent = parts.join("\n");
     };
 
@@ -1849,14 +2318,11 @@
         const needApi = [];
         for (const span of spans) {
             const id = span.getAttribute("data-id");
-            let meta = docRefCache.get(id);
-            if (!meta) {
-                const tree = metaFromFileTree(id);
-                if (tree) {
-                    docRefCache.set(id, tree);
-                    meta = tree;
-                }
+            const tree = metaFromFileTree(id);
+            if (tree) {
+                docRefCache.set(id, tree);
             }
+            const meta = tree || docRefCache.get(id);
             if (meta) {
                 if (rememberDocRef(id, meta)) {
                     sheetDirty = true;
@@ -1895,6 +2361,155 @@
         });
     };
 
+    const patchListedIconsFromCache = (ids) => {
+        const iconOf = (id) => {
+            const meta = docRefCache.get(id);
+            if (!meta || !meta.isDoc) {
+                return null;
+            }
+            return String(meta.icon || "");
+        };
+        let changed = false;
+        const bump = (arr) =>
+            arr.map((d) => {
+                const icon = iconOf(d.id);
+                if (icon === null || d.icon === icon) {
+                    return d;
+                }
+                changed = true;
+                return {...d, icon};
+            });
+        const favoriteDocs = bump(config.favoriteDocs);
+        const recentDocs = bump(config.recentDocs);
+        if (changed) {
+            saveConfigToFile({favoriteDocs, recentDocs});
+        }
+    };
+
+    const onDocIconsChanged = (ids, opts) => {
+        const unique = [...new Set((ids || []).filter(Boolean))];
+        if (!unique.length) {
+            return;
+        }
+        unique.forEach((id) => {
+            docRefCache.delete(id);
+            docRefInflight.delete(id);
+        });
+        const forceApi = !!opts?.forceApi;
+        if (forceApi) {
+            unique.forEach((id) => docRefPainted.delete(id));
+            Promise.all(unique.map((id) => loadDocRefMeta(id, {forceApi: true}))).then(() => {
+                if (config.customDocRefStyle !== false) {
+                    let dirty = false;
+                    unique.forEach((id) => {
+                        const meta = docRefCache.get(id);
+                        if (meta && rememberDocRef(id, meta)) {
+                            dirty = true;
+                        }
+                    });
+                    if (dirty) {
+                        renderDocRefSheet();
+                    }
+                }
+                patchListedIconsFromCache(unique);
+                applyRecentDocs();
+                applyFavoriteDocs();
+            });
+            return;
+        }
+        if (config.customDocRefStyle !== false) {
+            scheduleDocRefs();
+        }
+        applyRecentDocs();
+        applyFavoriteDocs();
+    };
+
+    let docIconWatchObs = null;
+    let docIconWatchRaf = 0;
+    let docIconWatchRetry = 0;
+    let docIconWatchTries = 0;
+    const docIconWatchIds = new Set();
+
+    const flushDocIconWatch = () => {
+        docIconWatchRaf = 0;
+        const ids = [...docIconWatchIds];
+        docIconWatchIds.clear();
+        onDocIconsChanged(ids);
+    };
+
+    const queueDocIconId = (id) => {
+        if (!id) {
+            return;
+        }
+        docIconWatchIds.add(id);
+        if (!docIconWatchRaf) {
+            docIconWatchRaf = requestAnimationFrame(flushDocIconWatch);
+        }
+    };
+
+    const startDocIconWatch = () => {
+        if (docIconWatchObs) {
+            return;
+        }
+        const host = document.querySelector("#layouts .sy__file");
+        if (!host) {
+            if (docIconWatchTries >= 40) {
+                return;
+            }
+            if (!docIconWatchRetry) {
+                docIconWatchTries += 1;
+                docIconWatchRetry = setTimeout(() => {
+                    docIconWatchRetry = 0;
+                    startDocIconWatch();
+                }, 400);
+            }
+            return;
+        }
+        docIconWatchTries = 0;
+        if (docIconWatchRetry) {
+            clearTimeout(docIconWatchRetry);
+            docIconWatchRetry = 0;
+        }
+        docIconWatchObs = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                const el = m.target instanceof Element ? m.target : m.target.parentElement;
+                const li = el?.closest?.("#layouts .sy__file ul[data-url] .b3-list-item[data-node-id]");
+                if (!li) {
+                    continue;
+                }
+                if (m.type === "attributes" && m.attributeName === "data-default-icon") {
+                    queueDocIconId(li.getAttribute("data-node-id"));
+                    continue;
+                }
+                if (el?.closest?.(".b3-list-item__icon")) {
+                    queueDocIconId(li.getAttribute("data-node-id"));
+                }
+            }
+        });
+        docIconWatchObs.observe(host, {
+            subtree: true,
+            childList: true,
+            characterData: true,
+            attributes: true,
+            attributeFilter: ["data-default-icon", "src", "href", "xlink:href"],
+        });
+    };
+
+    const stopDocIconWatch = () => {
+        docIconWatchObs?.disconnect();
+        docIconWatchObs = null;
+        if (docIconWatchRetry) {
+            clearTimeout(docIconWatchRetry);
+            docIconWatchRetry = 0;
+        }
+        docIconWatchTries = 0;
+        if (docIconWatchRaf) {
+            cancelAnimationFrame(docIconWatchRaf);
+            docIconWatchRaf = 0;
+        }
+        docIconWatchIds.clear();
+    };
+
     const startDocRefs = () => {
         if (docRefStarted) {
             refreshDocRefs();
@@ -1906,6 +2521,7 @@
         const host = document.querySelector("#layouts .layout__center") || document.body;
         docRefObs = new MutationObserver(scheduleDocRefs);
         docRefObs.observe(host, {childList: true, subtree: true});
+        startDocIconWatch();
         refreshDocRefs();
     };
 
@@ -2266,22 +2882,49 @@
             document.querySelector(`#layouts .layout__center .protyle-title[data-node-id="${id}"]`);
         const name = titleEl?.querySelector(".protyle-title__input")?.textContent?.trim() || "";
         const hintName = hintEl?.querySelector?.(":scope > .b3-list-item__text")?.textContent?.trim() || "";
-        const treeLi = document.querySelector(`#layouts .sy__file .b3-list-item[data-node-id="${id}"]`);
+        const treeLi = officialTreeItem(id);
         const treeName = treeLi?.querySelector(":scope > .b3-list-item__text")?.textContent?.trim() || "";
         const tree = metaFromFileTree(id);
         const known =
             config.favoriteDocs.find((d) => d.id === id) || config.recentDocs.find((d) => d.id === id);
+        const rawIcon = tree ? tree.icon || "" : known?.icon || "";
         return {
             id,
             title: name || hintName || treeName || known?.title || "",
-            icon: tree?.icon || known?.icon || "",
+            icon: useSvgDefaultIcon() && !tree && isStockFileGlyph(rawIcon) ? "" : rawIcon,
         };
     };
 
-    const recentIconInner = (icon) => {
-        const paint = metaToPaint({isDoc: true, icon: (icon || "").trim()});
+    const paintForListedDoc = (item) => {
+        const tree = item?.id ? metaFromFileTree(item.id) : null;
+        if (tree) {
+            return metaToPaint(tree);
+        }
+        const icon = (item?.icon || "").trim();
+        return metaToPaint({
+            isDoc: true,
+            icon: useSvgDefaultIcon() && isStockFileGlyph(icon) ? "" : icon,
+        });
+    };
+
+    const listedIconKey = (item) => {
+        const paint = paintForListedDoc(item);
+        if (paint.kind === "svg") {
+            return `svg:${paint.svgId || ""}`;
+        }
+        if (paint.kind === "img") {
+            return `img:${paint.src || ""}`;
+        }
+        return `g:${paint.glyph || ""}`;
+    };
+
+    const recentIconInner = (item) => {
+        const paint = paintForListedDoc(item);
         if (paint.kind === "img" && paint.src) {
             return `<img src="${escapeHtml(paint.src)}" alt="">`;
+        }
+        if (paint.kind === "svg" && paint.svgId) {
+            return svgUseHTML(paint.svgId);
         }
         return escapeHtml(paint.glyph || defaultDocGlyph());
     };
@@ -2353,7 +2996,7 @@
         const currentId = sidebarCurrentId("recent");
         const shown = items.slice(0, max);
         const key = `${max}|${recentCollapsed ? 1 : 0}|${currentId}|${shown
-            .map((d) => `${d.id || ""}\t${d.title || ""}\t${d.icon || ""}`)
+            .map((d) => `${d.id || ""}\t${d.title || ""}\t${listedIconKey(d)}`)
             .join("|")}`;
         const files = document.querySelectorAll(FILE_TREE_SEL);
         if (!files.length) {
@@ -2388,7 +3031,7 @@
                     const current = id && id === currentId ? " starter-recent-docs__item--current b3-list-item--focus" : "";
                     return `<li class="b3-list-item${current}" data-node-id="${escapeHtml(id)}" data-starter-recent-doc>
   ${TREE_TOGGLE_SPACE}
-  <span class="b3-list-item__icon">${recentIconInner(item.icon)}</span>
+  <span class="b3-list-item__icon">${recentIconInner(item)}</span>
   <span class="b3-list-item__text">${escapeHtml(title)}</span>
 </li>`;
                 })
@@ -2506,6 +3149,40 @@
         handleKernelPush(e?.detail && typeof e.detail === "object" ? e.detail : e);
     };
 
+    const collectUpdatedIconIds = (msg) => {
+        const ids = [];
+        const visitOp = (op) => {
+            if (!op || op.action !== "updateAttrs") {
+                return;
+            }
+            const data = op.data && typeof op.data === "object" ? op.data : {};
+            const next = data.new && typeof data.new === "object" ? data.new : data;
+            const prev = data.old && typeof data.old === "object" ? data.old : {};
+            if (!Object.prototype.hasOwnProperty.call(next, "icon") && !Object.prototype.hasOwnProperty.call(prev, "icon")) {
+                return;
+            }
+            if (String(next.icon || "") === String(prev.icon || "") && "icon" in next && "icon" in prev) {
+                return;
+            }
+            if (op.id) {
+                ids.push(op.id);
+            }
+        };
+        if (msg.cmd === "transactions" && Array.isArray(msg.data)) {
+            msg.data.forEach((tx) => {
+                (tx?.doOperations || []).forEach(visitOp);
+            });
+        }
+        if ((msg.cmd === "setBlockAttrs" || msg.cmd === "updateAttrs") && msg.data) {
+            const attrs = msg.data.attrs || msg.data.new || msg.data;
+            if (attrs && typeof attrs === "object" && Object.prototype.hasOwnProperty.call(attrs, "icon") && msg.data.id) {
+                ids.push(msg.data.id);
+            }
+            visitOp(msg.data);
+        }
+        return ids;
+    };
+
     const handleKernelPush = (msg) => {
         if (!msg || typeof msg !== "object") {
             return;
@@ -2518,6 +3195,11 @@
         }
         if (cmd === "unmount" || cmd === "removeNotebook" || cmd === "removeBox") {
             scheduleSweepMissingListedDocs();
+            return;
+        }
+        const iconIds = collectUpdatedIconIds(msg);
+        if (iconIds.length) {
+            onDocIconsChanged(iconIds, {forceApi: true});
         }
     };
 
@@ -2982,7 +3664,7 @@
         }
         const shown = favListExpanded ? items : items.slice(0, max);
         const key = `${max}|${favCollapsed ? 1 : 0}|${favListExpanded ? 1 : 0}|${currentId}|${items
-            .map((d) => `${d.id}\t${d.title || ""}\t${d.icon || ""}`)
+            .map((d) => `${d.id}\t${d.title || ""}\t${listedIconKey(d)}`)
             .join("|")}`;
         const files = document.querySelectorAll(FILE_TREE_SEL);
         if (!files.length) {
@@ -3014,7 +3696,7 @@
                 const current = id && id === currentId ? " starter-fav-docs__item--current b3-list-item--focus" : "";
                 return `<li class="b3-list-item b3-list-item--hide-action${current}" data-node-id="${escapeHtml(id)}" data-starter-fav-doc>
   ${TREE_TOGGLE_SPACE}
-  <span class="b3-list-item__icon">${recentIconInner(item.icon)}</span>
+  <span class="b3-list-item__icon">${recentIconInner(item)}</span>
   <span class="b3-list-item__text">${escapeHtml(title)}</span>
   <span class="b3-list-item__action ariaLabel" data-starter-unfav aria-label="取消收藏">
     <svg><use xlink:href="#iconClose"></use></svg>
@@ -3127,6 +3809,15 @@
         syncFavButtons();
     };
 
+    applySvgDefaultIcons = () => {
+        refreshOfficialDefaultTreeIcons();
+        docRefCache.clear();
+        docRefPainted.clear();
+        applyRecentDocs();
+        applyFavoriteDocs();
+        applyDocRefFeature();
+    };
+
     applyStyleFeatures = () => {
         const root = document.documentElement;
         root.classList.toggle("starter-plain-table-head", config.plainTableHead !== false);
@@ -3159,6 +3850,7 @@
 
     const tryMount = async () => {
         await initConfig();
+        await seedOfficialDefaultsIfNeeded();
         applyTopbarHeight();
         applyHiddenDockTypes();
         startOutlineFollow();
@@ -3168,19 +3860,23 @@
         applyHideNotebooks();
         applyRecentDocs();
         applyFavoriteDocs();
+        startDocIconWatch();
         const okDocks = mountAllDocks();
         const okToggles = mountToggles();
         const okMenu = bindPluginsMenu();
-        if (okDocks && okToggles && okMenu) {
+        const okHeart = mountDonateHeart();
+        if (okDocks && okToggles && okMenu && okHeart) {
             return;
         }
         const obs = new MutationObserver(() => {
             applyHiddenDockTypes();
             schedulePathBars();
+            startDocIconWatch();
             const d = mountAllDocks();
             const t = mountToggles();
             const m = bindPluginsMenu();
-            if (d && t && m) {
+            const h = mountDonateHeart();
+            if (d && t && m && h && docIconWatchObs) {
                 obs.disconnect();
             }
         });
@@ -3211,10 +3907,12 @@
         stopRecentDocs();
         stopFavoriteDocs();
         stopTreeFocusGuard();
+        stopDocIconWatch();
         stopDocRefs();
         unbindPluginsMenu();
         closeSettingsDialog();
         document.getElementById(HIDE_STYLE_ID)?.remove();
+        unmountDonateHeart();
         unmountToggles();
         sides.forEach(unmountOne);
     };

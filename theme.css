@@ -354,13 +354,18 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
  * ========================================================= */
 
 #starterToggleLeft,
-#starterToggleRight {
+#starterToggleRight,
+#starterDonateHeart {
     position: relative;
     z-index: 2;
     flex-shrink: 0;
     pointer-events: auto;
     -webkit-app-region: no-drag;
     app-region: no-drag;
+}
+
+#starterDonateHeart svg.ft__pink {
+    color: #e85d75;
 }
 
 /* =========================================================
@@ -633,6 +638,12 @@ html.starter-hide-notebook .sy__file ul[data-url] > ul > ul > ul > ul > ul > ul 
     cursor: pointer;
 }
 
+#layouts .sy__file .starter-recent-docs .b3-list-item__icon svg,
+#layouts .sy__file .starter-fav-docs .b3-list-item__icon svg {
+    width: 16px;
+    height: 16px;
+}
+
 /* 行内代码文字色（Notion #d6716a）；不含代码块 */
 .b3-typography :not(pre) > code,
 .protyle-wysiwyg [data-node-id] span[data-type~="code"] {
@@ -658,13 +669,34 @@ html.starter-block-line-height .b3-typography p {
 }
 
 /* 文档引用：未判定前只改正文色+加粗；图标/下划线由 #starterDocRefStyle 按 data-id 注入，禁止写 span.style */
-html.starter-custom-doc-ref .b3-typography span[data-type~="block-ref"][data-id]:not(.av__celltext),
-html.starter-custom-doc-ref .protyle-wysiwyg [data-node-id] span[data-type~="block-ref"][data-id]:not(.av__celltext) {
+html.starter-custom-doc-ref .b3-typography span[data-type~="block-ref"][data-id]:not(.av__celltext):not([custom-fhelper-child-nav] *),
+html.starter-custom-doc-ref .protyle-wysiwyg [data-node-id] span[data-type~="block-ref"][data-id]:not(.av__celltext):not([custom-fhelper-child-nav] *) {
     font-weight: 700;
     color: var(--b3-theme-on-background);
     text-decoration: none;
     border-bottom: none;
     transition: none;
+}
+
+html.starter-custom-doc-ref .b3-typography [custom-fhelper-child-nav] span[data-type~="block-ref"][data-id],
+html.starter-custom-doc-ref .protyle-wysiwyg [data-node-id][custom-fhelper-child-nav] span[data-type~="block-ref"][data-id] {
+    font-weight: inherit;
+    color: var(--b3-protyle-inline-blockref-color);
+    text-decoration: none;
+    border-bottom: none;
+    padding-left: 0;
+    padding-bottom: 0;
+    background-image: none;
+}
+
+html.starter-custom-doc-ref .b3-typography [custom-fhelper-child-nav] span[data-type~="block-ref"][data-id]::before,
+html.starter-custom-doc-ref .protyle-wysiwyg [data-node-id][custom-fhelper-child-nav] span[data-type~="block-ref"][data-id]::before {
+    content: none !important;
+    display: none !important;
+    width: 0 !important;
+    background: none !important;
+    -webkit-mask: none !important;
+    mask: none !important;
 }
 
 body.body--toolbar-hide .layout__wnd--left .layout-tab-container,
@@ -882,6 +914,10 @@ body:not(.body--toolbar-hide) #toolbar .toolbar__item--close {
 
 #starterSettingsDialog .starter-settings-action {
     flex-shrink: 0;
+}
+
+#starterSettingsDialog .starter-settings-action .b3-button {
+    margin: 0;
 }
 
 #starterSettingsDialog .starter-settings-empty {

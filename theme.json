@@ -1,29 +1,30 @@
 {
   "name": "cursorart",
   "author": "fyuan",
-  "url": "",
-    "version": "0.1.88",
+  "url": "https://github.com/fyuanace/cursorart",
+  "version": "2.0.2",
   "minAppVersion": "3.1.0",
   "displayName": {
     "default": "cursor极简",
-    "zh_CN": "cursor极简",
     "zh-CN": "cursor极简"
   },
   "description": {
-    "default": "Cursor-like minimal layout overlay on daylight/midnight.",
-    "zh_CN": "类 Cursor 极简四分区布局；亮色叠 daylight，暗色叠 midnight。",
-    "zh-CN": "类 Cursor 极简四分区布局；亮色叠 daylight，暗色叠 midnight。"
+    "default": "Cursor/Notion-inspired minimal overlay on daylight and midnight. Calmer layout, less chrome.",
+    "zh-CN": "主打极简风，参考 Cursor 与 Notion 做了布局与交互优化，视觉更干净、更舒服。亮色叠 daylight，暗色叠 midnight。"
   },
   "readme": {
     "default": "README.md",
-    "zh_CN": "README_zh_CN.md",
     "zh-CN": "README_zh_CN.md"
   },
+  "icon": "icon.png",
+  "preview": "preview.png",
   "funding": {
     "openCollective": "",
     "patreon": "",
     "github": "",
-    "custom": []
+    "custom": [
+      "https://siyuan.ysoft.site"
+    ]
   },
   "modes": [
     "light",
@@ -31,10 +32,10 @@
   ],
   "keywords": [
     "cursor",
+    "notion",
     "minimal",
     "极简",
     "daylight",
-    "midnight",
-    "layout"
+    "midnight"
   ]
 }

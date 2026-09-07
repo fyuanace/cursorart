@@ -18,6 +18,7 @@ tags: [bazaar, readme]
 |------|------|
 | 2026-09-04 | 版本定为 v2.0.1；补齐 `icon.png` / `preview.png`、中英文 README 与 `theme.json` 元数据 |
 | 2026-09-07 | 发布 v2.0.2：`icon` 用 ≤64KB 的 `icon.png`；补 `LICENSE`；说明新主题禁止 `theme.js` |
+| 2026-09-07 | 发布 v2.0.3：主题去 `theme.js`；交互迁至配套插件 `fyuanace/cursorart-tools` |
 
 ## 背景信息
 
@@ -34,8 +35,10 @@ tags: [bazaar, readme]
 
 - 集市详情用根目录 `README.md`（英文）与 `README_zh_CN.md`（中文）
 - 列表图标 `icon.png`（160×160，≤64KB）、卡片预览 `preview.png`（1024×768，≤512KB）；功能截图放在 `preview/`
-- `theme.json` 的 `name` 与文件夹 / 仓库名 `cursorart` 一致；`url` 为 GitHub 仓库地址；当前版本 `2.0.2`
+- `theme.json` 的 `name` 与文件夹 / 仓库名 `cursorart` 一致；`url` 为 GitHub 仓库地址；当前版本 `2.0.3`
 - 仓库根有 `LICENSE`（MIT）
+- 交互能力在独立插件仓库 `fyuanace/cursorart-tools`（集市 `plugins.txt` 另 PR）
+- 主题 `package.zip` **不含** `theme.js`
 
 ## 其他模块引用约束
 
@@ -48,8 +51,8 @@ tags: [bazaar, readme]
 1. `theme.json` 含 `icon`、`preview`、`url`、`zh-CN` 的 displayName / description / readme
 2. 根目录存在 `icon.png`、`preview.png`、`README.md`、`README_zh_CN.md`、`LICENSE`
 3. GitHub Release 标签与 `version` 一致（如 `v2.0.2`），附件为包根文件的 `package.zip`
-4. 若含 `theme.js`：仅本地 / Release 分发可用；集市 PR Check 会失败，除非先拆插件或进入官方白名单
+4. 主题包根不得含 `theme.js`；交互由 `cursorart-tools` 插件提供
 
 ## 其他说明
 
-上架还需在 GitHub 打 `vX.Y.Z` Release 并上传 `package.zip`；首次上架再向 [siyuan-note/bazaar](https://github.com/siyuan-note/bazaar) 提交 `themes.txt`。本主题功能依赖 `theme.js`，**当前无法按新主题规则直接过集市自动检查**。
+上架：GitHub Release 上传 `package.zip`；首次向 [siyuan-note/bazaar](https://github.com/siyuan-note/bazaar) 的 `themes.txt` 追加 `fyuanace/cursorart`（每个 PR 只能加 1 个包；插件另提 `plugins.txt`）。

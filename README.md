@@ -4,7 +4,9 @@ A **minimal** SiYuan theme inspired by [Cursor](https://cursor.com) and [Notion]
 
 Light mode overlays official **daylight**; dark mode overlays **midnight**. Colors stay on upstream tokens; this theme mainly changes layout and interaction.
 
-Enable **Load theme JS** under **Settings → Appearance**, and set both light and dark themes to **cursor极简**.
+Enable **cursor极简** for both light and dark themes under **Settings → Appearance**.
+
+Interactive features (settings panel, favorites, recents, like button, top dock strip, etc.) ship in the companion plugin **[cursorart-tools](https://github.com/fyuanace/cursorart-tools)** — install and enable it together with this theme.
 
 ## Look
 
@@ -54,6 +56,10 @@ The outline hides the document name and H1–H6 marks, bolds top-level headings,
 - Plain table headers and adjustable block line height
 
 ## Changelog
+
+### v2.0.3
+
+- Removed `theme.js` for bazaar rules; interactions move to companion plugin [cursorart-tools](https://github.com/fyuanace/cursorart-tools)
 
 ### v2.0.2
 

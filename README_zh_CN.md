@@ -4,7 +4,9 @@
 
 亮色叠在官方 **daylight** 上，暗色叠在官方 **midnight** 上，配色仍走官方变量，本主题只做布局与交互优化。
 
-使用前请在 **设置 → 外观** 打开「加载主题 JS」，并在亮色 / 暗色主题中都选择 **cursor极简**。
+使用前请在 **设置 → 外观** 的亮色 / 暗色主题中都选择 **cursor极简**。
+
+交互功能（设置面板、收藏、最近打开、喜欢按钮、侧栏顶栏 dock 等）已拆到配套插件 **[cursor极简工具](https://github.com/fyuanace/cursorart-tools)**，请一并安装并启用。
 
 ## 外观
 
@@ -54,6 +56,10 @@
 - 表格表头可与正文同字重；块行间距可调
 
 ## 版本更新
+
+### v2.0.3
+
+- 按集市新规移除 `theme.js`；交互改由配套插件 [cursorart-tools](https://github.com/fyuanace/cursorart-tools) 提供
 
 ### v2.0.2
 

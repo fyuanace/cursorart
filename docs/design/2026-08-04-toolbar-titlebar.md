@@ -36,6 +36,7 @@ tags: [layout, toolbar, regions, daylight]
 | 2026-09-01 | 标题栏截图目标改为 55 物理像素 |
 | 2026-09-01 | Tab 条 `+` / 下拉垂直居中，且中间 `fn__flex-1` 空白重新拉开并作为窗口拖动区 |
 | 2026-09-03 | 设置可分别隐藏 Tab 条「+」与页签下拉，空白拖动区仍在 |
+| 2026-09-07 | 标题栏压到 55 设备像素改为可开关：关闭时插件给 `html` 加 `starter-default-topbar`，把 `--starter-topbar-height` 改成官方约 42px；默认布局不依赖插件 class，避免插件未加载时顶栏错位、竖线贯穿标题栏 |
 
 ## 背景信息
 
@@ -67,7 +68,9 @@ tags: [layout, toolbar, regions, daylight]
 
 - 目标：只量 Tab/工具这一行，截图约 **55 设备像素**（不含路径条）
 - `theme.css`：用 `-webkit-min-device-pixel-ratio` / `min-resolution` 分档，`--starter-topbar-height = calc(55px / dpr)`（1x 为 `55px`）
-- 不再由插件/JS 写入该变量
+- 压矮 `#toolbar` / 文档 Tab / 侧栏顶条 / 全宽横线 / 竖线起点一律用 `--starter-topbar-height`，**不**依赖插件 class；插件未加载时主题仍对齐
+- 关闭「自适应标题栏高度」时插件给 `html` 加 `starter-default-topbar`，覆盖为 `42px`（与官方 Tab 行大致同高）；开启或缺省不加此类
+- 侧栏内容区顶部的 dock 横条仍用 `--starter-topbar-height`，由设置 `dockInContent` 控制是否挂载，与标题栏开关独立
 
 **顶栏侧栏开关（theme.js）**：
 

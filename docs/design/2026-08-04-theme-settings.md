@@ -31,6 +31,7 @@ tags: [settings, dock, theme.js]
 | 2026-08-05 | 设置对话框底部显示配置保存路径 |
 | 2026-09-02 | 设置增加「侧栏 / 样式」页签；样式里可开关自定义文档引用 |
 | 2026-09-02 | 两个页签叠在同一窗格里切换，窗口高度不随内容变 |
+| 2026-09-07 | 窗口固定 80vh；非当前页 `display: none`，各页自己滚动，短页不再被最长页撑出空白滚动条 |
 | 2026-09-02 | 样式页签增加「表格表头不加粗」开关与「块行间距」滑杆 |
 | 2026-09-03 | 侧栏页签增加「隐藏笔记本」，文件树可把文档提到第一级 |
 | 2026-09-03 | 侧栏页签增加「最近打开」条数滑杆，文件树顶部可列出最近文档 |
@@ -46,42 +47,55 @@ tags: [settings, dock, theme.js]
 | 2026-09-04 | 侧栏「关于」增加「复位捐助按钮」，点一下立刻重新显示爱心 |
 | 2026-09-07 | 复位捐助按钮改为清掉本机电脑名记录；换电脑名也会再显示爱心 |
 | 2026-09-07 | 「关于」文案由「复位捐助按钮」改为「复位喜欢按钮」 |
+| 2026-09-07 | 并入原 fhelper：六页签（侧栏/样式/编辑/斜杠菜单/配置同步/关于）；去掉保存按钮，每项即时生效并写入 |
+| 2026-09-07 | 设置入口改为官方插件项「cursor极简工具」（`openSetting`）；去掉菜单里重复的「cursor极简 设置」 |
+| 2026-09-07 | 设置对话框样式改由插件注入，换其它主题时面板仍按 fhelper 卡片页签显示；页签改为侧栏 / 样式 / 关于 |
+| 2026-09-07 | 侧栏页增加「自适应标题栏高度」「侧边工具放入内容视图」，且仅当前主题为 cursor极简 时可改；样式与关于任意主题可用 |
+| 2026-09-07 | 「关于」独立页签：显示插件/主题版本、复位喜欢按钮、打开配置路径 |
+| 2026-09-07 | 自适应标题栏关闭时才写 `starter-default-topbar`；默认顶栏布局由主题 CSS 直接生效 |
+| 2026-09-07 | 安装默认配置对齐常用组合；关于页增加「恢复默认配置」（保留收藏与最近打开） |
+| 2026-09-07 | 关于页「支持作者」「复位喜欢」单独成「支持」分组 |
+| 2026-09-07 | 设置对话框固定全屏遮罩与顶层 z-index，换主题也不被顶栏挡住 |
 
 ## 背景信息
 
-主题不是 Plugin，不能走 `this.setting` / 集市齿轮。用户仍希望有「和插件一样」的设置入口。官方插件设置出现在两处：集市已下载卡片齿轮、顶栏 `#barPlugins` 菜单；主题只能复用后者。
+主题设置已并入配套插件 **cursorart-tools**。官方插件入口出现在两处：集市已下载卡片齿轮、顶栏 `#barPlugins` 菜单中的「cursor极简工具」（由 `Plugin.openSetting` 自动生成）。不再另外插入「cursor极简 设置」，以免两条齿轮菜单。
 
 ## 当前方案
 
 **入口**
 
-- 监听 `#barPlugins` click，在官方菜单建完后 `menus.menu.addItem({ id, icon: iconSettings, label: "cursor极简 设置", click })`
-- 与带 `openSetting` 的插件配置项同菜单、同图标语义
+- `CursorArtTools.openSetting()` 打开同一 DIY 对话框；思源在插件菜单里自动列出「cursor极简工具」
+- 不再监听 `#barPlugins` 去 `addItem` 第二条「cursor极简 设置」
 
 **对话框**
 
-- DIY `.b3-dialog`（取消 / 保存），不依赖 `import { Dialog, Setting } from "siyuan"`
-- 页签样式与分组卡片对齐 fhelper：圆角底边高亮、区块圆角描边、行间细分隔；**侧栏**为「侧栏工具」与「关于」，**样式**拆成「文档树 / Tab 栏 / 正文」，块间距 24px
-- 列出当前 DOM 中全部 `.dock__item[data-type]`（排除 pin）；开关打开 = 显示，关闭 = 隐藏
-- 「关于」中展示配置保存路径 `CONFIG_PATH`（可复制），以及「复位喜欢按钮」（只清本机电脑名下的爱心记录，立刻重新显示，不写配置、不改云端人数；换电脑名也会再出现）
+- DIY `.b3-dialog` 挂到 `document.body`，插件 CSS 固定 `position: fixed; inset: 0; z-index: 100000`，遮罩与窗体分层，换其它主题时不被顶栏/侧栏盖住
+- 页签/分组卡片样式由插件注入（`#cursorart-tools-setting-css`），对齐 fhelper：圆角底边高亮、区块圆角描边、行间细分隔；不依赖 cursor极简 `theme.css`，换其它主题时面板仍正常
+- 页签：**侧栏**（布局开关 + dock 图标显隐，仅 cursor极简）、**样式**（文档树 / 默认图标 / Tab 栏 / 正文）、**编辑**（子文档导航植入 / 图片 / 输入者）、**斜杠菜单**、**配置同步**（含缓存路径）、**关于**（版本；支持：支持作者、复位喜欢；维护：恢复默认、配置文件路径）
+- 窗口高度固定 80vh，切页签不改变外框。非当前页签 `display: none`；内容区单独滚动，短页没有滚动条、长页（斜杠菜单）在窗内滚。切页签时内容区滚回顶部
+- **无保存按钮**；每个开关/滑杆立刻改界面并写入 `/data/storage/theme/cursorart/config.json`（滑杆写盘约 200ms 防抖）。Esc / 点遮罩只关窗、不回滚
+- **侧栏**页仅当当前亮/暗主题文件夹为 `cursorart` 时可操作；否则提示并禁用。其余页签任意主题可用
 
 **生效与持久化**
 
 - 文件：`/data/storage/theme/cursorart/config.json`（工作区，经 `/api/file/getFile` / `putFile`）
-- 内容：`{ hiddenDockTypes: string[], customDocRefStyle: boolean, plainTableHead: boolean, blockLineHeight: number, hideNotebooks: boolean, hideTabNewDoc: boolean, hideTabSwitch: boolean, showRecentDocs: boolean, showFavoriteDocs: boolean, recentDocsMax: number, favoriteDocsMax: number, favoriteDocs: {id, title, icon}[], recentDocs: {id, title, icon}[], seededOfficialDefaults: boolean }`
-- 对话框页签：**侧栏**（dock 图标显隐）、**样式**（隐藏笔记本、隐藏 Tab 栏新建文档/页签切换、最近打开/收藏的显示与条数、链接样式、表格表头不加粗、块行间距、默认使用 SVG 图标、隐藏底部状态栏）；`customDocRefStyle` / `plainTableHead` 缺省为 `true`，`blockLineHeight` 缺省 `1.625`（范围 1.2–2.6），`hideNotebooks` / `hideTabNewDoc` / `hideTabSwitch` 缺省 `false`，`showRecentDocs` / `showFavoriteDocs` 缺省 `true`，`recentDocsMax` / `favoriteDocsMax` 缺省 `8`（范围 1–32），`favoriteDocs` / `recentDocs` 缺省 `[]`（面包屑五角星维护收藏；打开文档维护最近打开）。旧配置若条数为 0 且没有显隐字段，视为关闭对应区块并把条数恢复为 8
-- 「默认使用 SVG 图标」不是主题配置项：打开设置时读 `window.siyuan.config.fileTree.useSVGDefaultIcon`；保存时把完整 `fileTree` 对象 POST 到 `/api/setting/setFiletree`（只改这一字段），与思源「设置 → 文档树」同名开关写入同一处。拖动开关即时预览官方树默认图标以及收藏 / 最近打开 / 文档引用；取消则还原。当前思源没有该布尔字段时不显示此行
-- 「隐藏底部状态栏」同样不是主题配置项：读写官方 `appearance.hideStatusBar`，POST 完整 `appearance` 到 `/api/setting/setAppearance`；只切整条 `#status` 的 `fn__none` 与底栏边距，不改状态栏里显示哪些消息。当前思源没有该字段时不显示此行
+- 内容：布局字段 + 编辑类 `disabled` / `imageScale` / `panguSpacing` / `childDocWidget` / `configSync` / `editorFeaturesMigrated`（见插件 docs）
+- 对话框页签：**侧栏**（`adaptiveTopbarHeight` / `dockInContent` 缺省 `true`；默认隐藏 inbox / bookmark / agentChat；dock 图标显隐仅 cursor极简生效）、**样式**、**关于**（含恢复默认配置）。缺省：`customDocRefStyle` `false`，`plainTableHead` `true`，`blockLineHeight` `1.65`（范围 1.2–2.6），`hideNotebooks` `false`，`hideTabNewDoc` / `hideTabSwitch` `true`，`showRecentDocs` `false`，`showFavoriteDocs` `true`，`recentDocsMax` / `favoriteDocsMax` `8`（范围 1–32），`favoriteDocs` / `recentDocs` `[]`。编辑类缺省：`imageScale` 缩放与居中开启，`panguSpacing` 开启，`childDocWidget` 开启，斜杠 `disabled` 为空。无配置文件时按此写入。关于页「恢复默认配置」写回上述值并重开对话框，**不**清空收藏/最近打开名单；同时把官方 SVG 默认图标与隐藏状态栏设回开启
+- 「默认使用 SVG 图标」不是主题配置项：读写官方 `fileTree.useSVGDefaultIcon`；开关立刻 POST `/api/setting/setFiletree`。当前思源没有该布尔字段时不显示此行
+- 「隐藏底部状态栏」同样立刻写入官方 `appearance.hideStatusBar`
+- 滑杆与开关都即时改界面并写盘；Esc / 点遮罩只关窗不回滚
+- 若正在显示将被隐藏的 dock 面板，先按官方语义收起该面板
 - 首次启用本主题（`config.json` 里还没有 `seededOfficialDefaults`）时，把官方设置改成主题默认一次：`useSVGDefaultIcon = true`、`hideStatusBar = true`，然后写下 `seededOfficialDefaults: true`。之后重启、切走再切回都不再改官方值；用户之后在主题设置或思源设置里改的，两边一起跟
-- 滑杆拖动即时改行高、最近打开条数与收藏条数；显示开关即时显隐文件树区块；Tab 栏按钮开关即时显隐「+」/ 下拉；表头开关即时预览；取消 / Esc / 点遮罩则还原未保存值；保存时与现有配置合并，保留 `favoriteDocs` / `recentDocs` / `seededOfficialDefaults`
+- 滑杆拖动即时改行高、最近打开条数与收藏条数并防抖写盘；显示开关即时显隐文件树区块；Tab 栏按钮开关即时显隐「+」/ 下拉；表头开关即时预览并写盘
 - 迁移顺序：新路径 → 旧路径 `/data/storage/theme/starter/config.json` → 旧版 `localStorage["starter-theme-config"]`；后两者读到后写入新路径并尽量清 localStorage
 - `#starterHideDockStyle` 注入 `.dock__item[data-type="…"]{display:none!important}`
-- 保存时若正在显示将被隐藏的面板，先按官方语义收起该面板
+- 切换 dock 隐藏时若正在显示将被隐藏的面板，先按官方语义收起该面板
 - 侧栏折叠/展开选类型时跳过已隐藏项
 
 **卸载**
 
-- `destroyTheme` 移除菜单监听、对话框、隐藏样式，以及 `starter-plain-table-head` / `starter-block-line-height` / `starter-hide-notebook` / `starter-hide-tab-new` / `starter-hide-tab-more` 与 `--starter-block-line-height`
+- `destroyTheme` 移除对话框、隐藏样式、设置/功能注入样式，以及 `starter-adaptive-topbar` / `starter-default-topbar` / `starter-plain-table-head` / `starter-block-line-height` / `starter-hide-notebook` / `starter-hide-tab-new` / `starter-hide-tab-more` 与 `--starter-block-line-height`
 
 **已选中图标再点**
 
@@ -99,8 +113,11 @@ tags: [settings, dock, theme.js]
 ## 工程师测试验收方法
 
 1. 开启「加载主题 JS」，reload
-2. 点顶栏插件图标 → 菜单末应有「cursor极简 设置」；样式页签应分成文档树 / Tab 栏 / 正文三块卡片，块间距明显大于行间距
-3. 打开设置，侧栏页签底部「关于」应显示配置路径 `/data/storage/theme/cursorart/config.json`；切到样式页签后该块不应再出现
+2. 点顶栏插件图标 → 菜单应有且仅有一条「cursor极简工具」（齿轮）；不应再出现「cursor极简 设置」。打开后页签为侧栏 / 样式 / 编辑 / 斜杠菜单 / 配置同步 / 关于；样式页签应分成文档树 / Tab 栏 / 正文三块卡片，块间距明显大于行间距
+2b. 切任意页签时外框高度不变（约 80vh）；侧栏等短页无滚动条（底部可留白）；斜杠菜单等长页只在内容区滚动；切页签后滚动位置回到顶部
+3. 换到其它主题后打开设置：页签与卡片仍应正常排版（不依赖 cursor极简 CSS）；对话框应盖住顶栏与侧栏，点遮罩可关闭；侧栏页应提示并禁用；样式与关于仍可操作
+3b. 关于页签应显示版本、「支持」分组（支持作者、复位喜欢）、「维护」分组（恢复默认、配置路径及「打开」）；侧栏页不应再出现这些项
+3c. 删掉 `config.json` 后重载：应写入默认（隐藏 inbox/bookmark/agentChat、关链接样式、隐藏 Tab +/下拉、关最近打开、开收藏、行高 1.65、图片缩放/居中与输入者开启）。关于页点「恢复默认」并确认：上述开关回到默认，收藏名单仍在；对话框重开后开关与默认一致
 4. 打开设置，关闭「标签」「收集箱」等开关并保存 → 对应侧栏图标消失
 5. 再打开设置打开开关并保存 → 图标恢复
 6. 切换主题离开 starter → 隐藏样式与菜单挂钩应被 `destroyTheme` 清掉

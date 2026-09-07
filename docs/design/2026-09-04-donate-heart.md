@@ -21,6 +21,7 @@ tags: [donate, toolbar, cloudflare]
 | 2026-09-04 | 爱心改挂顶栏 `#barForward` 之后（前进按钮与文档 Tab 之间）；人数默认从 300 起显示 |
 | 2026-09-04 | 设置「关于」增加复位捐助按钮：清掉本机标记后立刻重新显示爱心 |
 | 2026-09-07 | 设置文案改为「复位喜欢按钮」 |
+| 2026-09-07 | 关于页「支持作者」与「复位喜欢」单独放在「支持」分组 |
 | 2026-09-04 | 点击先用系统浏览器打开 `/?from=theme`（由页面计次），爱心等浏览器调起后再消失；收款码在 QQ 群上方，三图按原图像素显示 |
 | 2026-09-04 | QQ 群码前增加提示：加群备注赞助账户名与金额，或加群后私聊群主发赞助截图，作者才优先响应 |
 | 2026-09-04 | 收款码缩小为 280 CSS 像素方格：微信与支付宝并排等大，QQ 群码同样缩小；浏览器标签用粉色爱心图标 |
@@ -37,7 +38,7 @@ tags: [donate, toolbar, cloudflare]
 
 - 挂在顶栏 `#barForward`（前进）之后、`#drag` / 文档 Tab 之前，控件为 `div.toolbar__item`（不是左侧 dock）
 - 图标复用思源集市赞助同款：`<svg class="ft__pink"><use xlink:href="#iconHeart">`
-- 无 `data-type`，不进「cursor极简 设置」的 dock 显隐列表，也不走官方 `toggleModel`
+- 无 `data-type`，不进「cursor极简工具」设置里的 dock 显隐列表，也不走官方 `toggleModel`
 
 **点击**
 
@@ -46,7 +47,7 @@ tags: [donate, toolbar, cloudflare]
 
 电脑名优先读 Electron `os.hostname()`，没有则用思源 `config.system.name`。`localStorage["cursorart-donate-clicked-host"]` 等于当前电脑名时不再插入爱心；对不上（新设备、改名）则再显示。旧标志 `cursorart-donate-clicked=1` 启动时迁成「当前电脑名已点过」。不写入工作区 `config.json`，不随思源同步。
 
-设置「侧栏 → 关于」有「复位喜欢按钮」：点「复位」会清掉电脑名记录并立刻重新插入爱心，不必保存、不必重启。复位只恢复显示，不会改 Cloudflare 上的人数。
+设置「关于 → 支持」有「复位喜欢按钮」：点「复位」会清掉电脑名记录并立刻重新插入爱心，不必保存、不必重启。复位只恢复显示，不会改 Cloudflare 上的人数。
 
 **支持页（独立目录，不在主题包内）**
 

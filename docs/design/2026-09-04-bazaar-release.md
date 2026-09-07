@@ -19,6 +19,7 @@ tags: [bazaar, readme]
 | 2026-09-04 | 版本定为 v2.0.1；补齐 `icon.png` / `preview.png`、中英文 README 与 `theme.json` 元数据 |
 | 2026-09-07 | 发布 v2.0.2：`icon` 用 ≤64KB 的 `icon.png`；补 `LICENSE`；说明新主题禁止 `theme.js` |
 | 2026-09-07 | 发布 v2.0.3：主题去 `theme.js`；交互迁至配套插件 `fyuanace/cursorart-tools` |
+| 2026-09-07 | 发布 v2.0.5：自适应标题栏高度改为可开关；设置对话框 CSS 移出主题 |
 
 ## 背景信息
 
@@ -35,7 +36,7 @@ tags: [bazaar, readme]
 
 - 集市详情用根目录 `README.md`（英文）与 `README_zh_CN.md`（中文）
 - 列表图标 `icon.png`（160×160，≤64KB）、卡片预览 `preview.png`（1024×768，≤512KB）；功能截图放在 `preview/`
-- `theme.json` 的 `name` 与文件夹 / 仓库名 `cursorart` 一致；`url` 为 GitHub 仓库地址；当前版本 `2.0.3`
+- `theme.json` 的 `name` 与文件夹 / 仓库名 `cursorart` 一致；`url` 为 GitHub 仓库地址；当前版本 `2.0.5`
 - 仓库根有 `LICENSE`（MIT）
 - 交互能力在独立插件仓库 `fyuanace/cursorart-tools`（集市 `plugins.txt` 另 PR）
 - 主题 `package.zip` **不含** `theme.js`

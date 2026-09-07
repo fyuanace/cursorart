@@ -24,7 +24,7 @@ Dark and light both keep a clear sidebar / editor / outline split. Selection is 
 
 ### Hide sidebar tools
 
-Plugins menu → **cursor极简 设置** → Sidebar. Turn off tags, graph, inbox, and other dock icons you do not use.
+Plugins menu → **cursor极简工具**. Sidebar tab: adaptive title-bar height, dock-in-content, hide unused dock icons (cursorart theme only). Edit / slash / config-sync came from fhelper — disable fhelper. Every control applies immediately; there is no Save button.
 
 <img src="preview/settings-dock.png" alt="Hide sidebar tools" width="360">
 

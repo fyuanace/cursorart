@@ -11,11 +11,14 @@
  *   └──────────┴───────────────┴─────────────┘
  *
  * 开发：改完后 Network 勾 Disable cache，控制台 location.reload()
- * 左/右 dock 横条在对应侧栏顶部（.layout__dockl / .layout__dockr 内），依赖 theme.js
+ * 左/右 dock 横条在对应侧栏顶部（.layout__dockl / .layout__dockr 内），依赖配套插件
  */
 
 :root {
-    /* 唯一自有令牌：标题栏行高。目标是截图像素 55；theme.js 按 devicePixelRatio 写入 CSS 值 */
+    /*
+     * 标题栏目标：截图约 55 设备像素。
+     * CSS 像素 = 55 / devicePixelRatio；用 resolution / -webkit-device-pixel-ratio 分档。
+     */
     --starter-topbar-height: 55px;
 
     /* 取消圆角卡片托盘：间隙归零；底色跟面板；关掉左上角高光 */
@@ -23,6 +26,43 @@
     --b3-layout-space-margin: 0px;
     --b3-body-background: var(--b3-theme-background);
     --b3-body-background-hl-opacity: 0;
+}
+
+/* 常见系统缩放：100% / 125% / 150% / 175% / 200% / 250% / 300% */
+@media (-webkit-min-device-pixel-ratio: 1.25), (min-resolution: 1.25dppx) {
+    :root {
+        --starter-topbar-height: calc(55px / 1.25);
+    }
+}
+
+@media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 1.5dppx) {
+    :root {
+        --starter-topbar-height: calc(55px / 1.5);
+    }
+}
+
+@media (-webkit-min-device-pixel-ratio: 1.75), (min-resolution: 1.75dppx) {
+    :root {
+        --starter-topbar-height: calc(55px / 1.75);
+    }
+}
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 2dppx) {
+    :root {
+        --starter-topbar-height: calc(55px / 2);
+    }
+}
+
+@media (-webkit-min-device-pixel-ratio: 2.5), (min-resolution: 2.5dppx) {
+    :root {
+        --starter-topbar-height: calc(55px / 2.5);
+    }
+}
+
+@media (-webkit-min-device-pixel-ratio: 3), (min-resolution: 3dppx) {
+    :root {
+        --starter-topbar-height: calc(55px / 3);
+    }
 }
 
 /* 亮色 / 暗色底：统一面板与窗体背景 */

@@ -57,6 +57,10 @@ The outline hides the document name and H1–H6 marks, bolds top-level headings,
 
 ## Changelog
 
+### v2.0.4
+
+- Title-bar height in pure CSS via DPI / `resolution` media queries (~55 device pixels)
+
 ### v2.0.3
 
 - Removed `theme.js` for bazaar rules; interactions move to companion plugin [cursorart-tools](https://github.com/fyuanace/cursorart-tools)

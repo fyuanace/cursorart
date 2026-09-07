@@ -57,6 +57,10 @@
 
 ## 版本更新
 
+### v2.0.4
+
+- 标题栏高度改纯 CSS：按 DPI/`resolution` 分档，目标约 55 设备像素
+
 ### v2.0.3
 
 - 按集市新规移除 `theme.js`；交互改由配套插件 [cursorart-tools](https://github.com/fyuanace/cursorart-tools) 提供

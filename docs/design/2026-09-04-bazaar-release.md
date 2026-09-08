@@ -23,6 +23,7 @@ tags: [bazaar, readme]
 | 2026-09-07 | 主题与插件共用一份用户介绍；亮色 / 暗色预览换成当前界面截图 |
 | 2026-09-07 | 用户介绍截图改到 `image/`；集市卡片仍用根目录 `preview.png` |
 | 2026-09-08 | 发布 v2.0.10：`preview.png` 改为真实 PNG，通过集市格式检查 |
+| 2026-09-08 | 用户介绍开篇注明当前匹配的主题与插件版本 |
 
 ## 背景信息
 
@@ -38,6 +39,7 @@ tags: [bazaar, readme]
 ## 当前方案
 
 - 集市详情用根目录 `README.md`（英文）与 `README_zh_CN.md`（中文），与插件介绍同一份文案；正文源在 `docs/instruction/`
+- 介绍开篇写当前匹配的主题 / 插件版本，须与 `theme.json`、配套插件 `plugin.json` 的 `version` 一致；发版改版本号时同步改这一行
 - 列表图标 `icon.png`（160×160，≤64KB）、卡片预览 `preview.png`（用亮色全界面截图，留在仓库根）；介绍正文截图在 `image/`（含亮 / 暗预览 `image/light.png`、`image/dark.png`）
 - `theme.json` 的 `name` 与文件夹 / 仓库名 `cursorart` 一致；`url` 为 GitHub 仓库地址；当前版本 `2.0.10`
 - 仓库根有 `LICENSE`（MIT）

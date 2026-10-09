@@ -4,7 +4,7 @@ Currently matched versions: theme **v2.0.12**, plugin **v1.2.11**.
 
 **Inspired by Cursor and Notion: a clean, modern layout and interaction. Adds CJK-Latin spacing, image optimization, favorites, and other highly requested features. Please install the cursor极简 theme and the cursor极简工具 plugin together.**
 
-Installing only the **cursor极简** theme without the **cursor极简工具** plugin: no favorites, child-doc index, or config sync.
+Installing only the **cursor极简** theme without the **cursor极简工具** plugin: no favorites or config sync.
 
 Installing only the **cursor极简工具** plugin without the **cursor极简** theme: sidebar layout and look will not match.
 
@@ -33,7 +33,6 @@ Set **cursor极简** for both light and dark. Settings: Plugins menu → **curso
 - Breadcrumb shows the document path.
 - Star to favorite the current doc without digging through native menus.
 - Recently opened list on the file tree.
-- Auto-inserts a child-doc index block; you can delete children from that index.
 
 ### 3. Hidden chrome
 
@@ -65,7 +64,7 @@ The outline hides the doc name and Hx badges, bolds top-level headings, and foll
 
 <img src="image/display.png" alt="Display: favorites, recents, sidebar, and outline" width="720">
 
-## Finding docs and child pages
+## Finding docs
 
 The stock breadcrumb follows block headings, not the file tree.
 
@@ -75,13 +74,7 @@ Native favorites are buried. One star on the breadcrumb pins the current doc.
 
 Recents sit at the top of the file tree.
 
-Unlike Notion, SiYuan does not index child docs in the body by default.
-
-Opening a doc injects the current-level child-doc blocks. You can also delete those children from the index.
-
 <img src="image/docs-path.png" alt="Document path breadcrumb and document-ref style" width="720">
-
-<img src="image/docs-child.png" alt="Child-doc index in the body and outline" width="720">
 
 ## Too many buttons
 
@@ -107,9 +100,9 @@ Body text grayness, font size, and block line height are sliders in Style.
 
 ## Config across PCs
 
-SiYuan does not sync `/conf` settings or custom themes.
+SiYuan does not sync `/conf` settings. Themes live in the data folder and sync with SiYuan itself.
 
-Config sync copies them into workspace data, then uses official sync.
+Config sync copies only app settings into workspace data, then uses official sync.
 
 Overwrite on one machine, download on the other, then restart.
 
@@ -121,7 +114,7 @@ Turn on SiYuan cloud sync or S3 first.
 
 1. Install theme **cursor极简** for light and dark.
 2. Install and enable the companion plugin **cursor极简工具**. The theme and plugin must be used together.
-3. Disable **fhelper** if it is still on, or child-doc index will double.
+3. Disable **fhelper** if it is still on.
 4. Restart SiYuan if the sidebar strip did not mount.
 
 Theme: [cursorart](https://github.com/fyuanace/cursorart) · Plugin: [cursorart-tools](https://github.com/fyuanace/cursorart-tools)

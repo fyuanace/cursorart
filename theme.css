@@ -825,48 +825,11 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
 .protyle-wysiwyg .code-block .hljs,
 .b3-typography .code-block .hljs,
 .protyle-wysiwyg [data-type="NodeCodeBlock"] .hljs {
-    /* 官方代码字号是编辑器字号的 85%，这里用 80%。
-     * 行高 1.6em = 这个 80% 字号的 1.6 倍。 */
-    --starter-code-line: 1.6em;
-    font-size: 80%;
-    line-height: var(--starter-code-line);
+    line-height: 1.75;
     /* 官方约 2em 1em 1.6em；四周各加一点，上边仍留给语言栏 */
     padding: 2.4em 1.45em 2.05em !important;
     border-radius: var(--b3-border-radius);
     background-color: var(--b3-protyle-code-background);
-}
-
-.protyle-wysiwyg .code-block .hljs > :not(.protyle-linenumber__rows),
-.b3-typography .code-block .hljs > :not(.protyle-linenumber__rows) {
-    line-height: var(--starter-code-line);
-}
-
-/* 思源脚本把行号步长写成编辑器字号×1.625×0.85，不跟这里的 80% 走。
- * 行号盒改用和代码相同的 1.6em；数字仍是代码字号的 85%，不参与撑高。 */
-.protyle-wysiwyg .code-block .hljs .protyle-linenumber__rows,
-.b3-typography .code-block .hljs .protyle-linenumber__rows {
-    font-size: 100%;
-    line-height: var(--starter-code-line);
-}
-
-.protyle-wysiwyg .code-block .hljs .protyle-linenumber__rows > span,
-.b3-typography .code-block .hljs .protyle-linenumber__rows > span {
-    display: block;
-    box-sizing: border-box;
-    height: var(--starter-code-line) !important;
-    min-height: var(--starter-code-line) !important;
-    max-height: var(--starter-code-line) !important;
-    margin: 0;
-    padding: 0;
-    line-height: var(--starter-code-line);
-    font-size: 1em;
-}
-
-.protyle-wysiwyg .code-block .hljs .protyle-linenumber__rows > span::before,
-.b3-typography .code-block .hljs .protyle-linenumber__rows > span::before {
-    font-size: 85%;
-    line-height: 1;
-    height: auto;
 }
 
 /* 外圈 padding 留给选中高亮（::after 铺满 padding 盒）。

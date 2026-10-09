@@ -1,6 +1,6 @@
 # cursor极简
 
-Currently matched versions: theme **v2.0.11**, plugin **v1.2.10**.
+Currently matched versions: theme **v2.0.12**, plugin **v1.2.11**.
 
 **Inspired by Cursor and Notion: a clean, modern layout and interaction. Adds CJK-Latin spacing, image optimization, favorites, and other highly requested features. Please install the cursor极简 theme and the cursor极简工具 plugin together.**
 
@@ -45,7 +45,7 @@ Set **cursor极简** for both light and dark. Settings: Plugins menu → **curso
 - Auto space between Chinese and Latin text.
 - Images scale by DPI so they do not explode, and center themselves.
 - Optional document-ref icons.
-- Adjustable block line height.
+- Adjustable body text grayness, body font size, and block line height.
 
 ### 5. Config sync
 
@@ -101,7 +101,7 @@ High-DPI pastes make huge images. Width follows system DPI; image paragraphs cen
 
 Document-ref icons are on by default so they do not look like plain text.
 
-Block line height is a slider in Style.
+Body text grayness, font size, and block line height are sliders in Style.
 
 <img src="image/editing.png" alt="Editing: DPI image scale and CJK-Latin spacing" width="720">
 
@@ -133,6 +133,10 @@ If this theme or plugin helps you, please visit the [support page](https://siyua
 ## Changelog
 
 ### Theme cursor极简
+
+#### v2.0.12
+
+- Typography: taller heading line-height/padding, denser lists, code-block spacing, smaller table font, denser right dock
 
 #### v2.0.11
 
@@ -186,6 +190,10 @@ First public release.
 - File-tree favorites and recents, path breadcrumb, document-ref style, quieter outline that follows the editor
 
 ### Plugin cursor极简工具
+
+#### v1.2.11
+
+- Style tab: sliders for body text grayness and body font size; apply live and save to config.json
 
 #### v1.2.10
 

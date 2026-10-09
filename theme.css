@@ -26,6 +26,8 @@
      */
     --starter-editor-margin-left: 100px;
     --starter-editor-margin-right: 20px;
+    /* 1 物理像素。CSS 的 1px 在 150% 下是 1.5 个设备像素，线会变粗。 */
+    --starter-device-px: 1px;
 
     /* 取消圆角卡片托盘：间隙归零；底色跟面板；关掉左上角高光 */
     --b3-layout-space: 0px;
@@ -40,6 +42,7 @@
         --starter-topbar-height: calc(55px / 1.25);
         --starter-editor-margin-left: calc(100px / 1.25);
         --starter-editor-margin-right: calc(20px / 1.25);
+        --starter-device-px: calc(1px / 1.25);
     }
 }
 
@@ -48,6 +51,7 @@
         --starter-topbar-height: calc(55px / 1.5);
         --starter-editor-margin-left: calc(100px / 1.5);
         --starter-editor-margin-right: calc(20px / 1.5);
+        --starter-device-px: calc(1px / 1.5);
     }
 }
 
@@ -56,6 +60,7 @@
         --starter-topbar-height: calc(55px / 1.75);
         --starter-editor-margin-left: calc(100px / 1.75);
         --starter-editor-margin-right: calc(20px / 1.75);
+        --starter-device-px: calc(1px / 1.75);
     }
 }
 
@@ -64,6 +69,7 @@
         --starter-topbar-height: calc(55px / 2);
         --starter-editor-margin-left: calc(100px / 2);
         --starter-editor-margin-right: calc(20px / 2);
+        --starter-device-px: calc(1px / 2);
     }
 }
 
@@ -72,6 +78,7 @@
         --starter-topbar-height: calc(55px / 2.5);
         --starter-editor-margin-left: calc(100px / 2.5);
         --starter-editor-margin-right: calc(20px / 2.5);
+        --starter-device-px: calc(1px / 2.5);
     }
 }
 
@@ -80,6 +87,7 @@
         --starter-topbar-height: calc(55px / 3);
         --starter-editor-margin-left: calc(100px / 3);
         --starter-editor-margin-right: calc(20px / 3);
+        --starter-device-px: calc(1px / 3);
     }
 }
 
@@ -456,9 +464,12 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     background-color: var(--b3-theme-background);
 }
 
-:root[data-theme-mode="light"] .layout__dockl.starter-dock-panel--with-top > #dockLeft.starter-dock--sidebar-top,
-:root[data-theme-mode="light"] .layout__dockr.starter-dock-panel--with-top > #dockRight.starter-dock--sidebar-top {
+:root[data-theme-mode="light"] .layout__dockl.starter-dock-panel--with-top > #dockLeft.starter-dock--sidebar-top {
     background-color: var(--starter-panel-background);
+}
+
+:root[data-theme-mode="light"] .layout__dockr.starter-dock-panel--with-top > #dockRight.starter-dock--sidebar-top {
+    background-color: #ffffff;
 }
 
 .layout__dockl.starter-dock-panel--with-top > #dockLeft.starter-dock--sidebar-top ~ *,
@@ -664,7 +675,6 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
 
 :root[data-theme-mode="light"] .layout__dockl .sy__file,
 :root[data-theme-mode="light"] .layout__dockl .block__icons,
-:root[data-theme-mode="light"] .layout__dockr .block__icons,
 :root[data-theme-mode="light"] .protyle-wysiwyg [data-subtype="mindmap"],
 :root[data-theme-mode="light"] .protyle-wysiwyg [data-subtype="mindmap"] svg,
 :root[data-theme-mode="light"] .protyle-wysiwyg .mindmap-view,
@@ -681,7 +691,8 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     background-color: #ffffff;
 }
 
-:root[data-theme-mode="light"] .layout__dockr .sy__outline {
+:root[data-theme-mode="light"] .layout__dockr .sy__outline,
+:root[data-theme-mode="light"] .layout__dockr .block__icons {
     background-color: #ffffff;
 }
 
@@ -1156,19 +1167,22 @@ body.body--toolbar-hide .layout__wnd--right .layout-tab-container {
 /*
  * 分区竖/横线：恢复被官方 content:none + layout-space:0 吃掉的线。
  * 颜色一律 var(--b3-border-color)（daylight）。
+ * 竖线宽度用 --starter-device-px：按系统缩放分成 1 个物理像素。
+ * CSS 读不到实时 devicePixelRatio，只能跟顶栏一样按 100/125/150/175/200/250/300% 分档。
+ * 自定义缩放（如 110%）会落在相邻一档上，厚度接近 1 物理像素，但不是正好。
  */
 .layout__dockl + .layout__resize,
 .layout__center + .layout__resize {
-    width: 1px;
+    width: var(--starter-device-px);
     margin: 0;
 }
 
-/* 右侧分隔线压成 1px，避免拖拽条的 6px 宽度露出来 */
+/* 右侧分隔线压成 1 物理像素，避免拖拽条的 6px 宽度露出来 */
 .layout__center + .layout__resize.layout__resize--lr {
-    width: 1px !important;
-    min-width: 1px;
-    max-width: 1px;
-    flex: 0 0 1px;
+    width: var(--starter-device-px) !important;
+    min-width: var(--starter-device-px);
+    max-width: var(--starter-device-px);
+    flex: 0 0 var(--starter-device-px);
     margin: 0 !important;
 }
 
@@ -1185,7 +1199,7 @@ body.body--toolbar-hide .layout__wnd--right .layout-tab-container {
 }
 
 .layout__resize--lr::after {
-    width: 1px;
+    width: var(--starter-device-px);
     left: 0;
     top: 0;
     height: 100%;

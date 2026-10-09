@@ -245,7 +245,8 @@ body.body--toolbar-hide .layout-tab-bar .item {
     background-image: none;
 }
 
-:root[data-theme-mode="light"] #layouts .layout__center .layout-tab-bar {
+:root[data-theme-mode="light"] #layouts .layout__center .layout-tab-bar,
+:root[data-theme-mode="light"] #toolbar.toolbar {
     background-color: var(--starter-panel-background);
 }
 
@@ -455,6 +456,11 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     background-color: var(--b3-theme-background);
 }
 
+:root[data-theme-mode="light"] .layout__dockl.starter-dock-panel--with-top > #dockLeft.starter-dock--sidebar-top,
+:root[data-theme-mode="light"] .layout__dockr.starter-dock-panel--with-top > #dockRight.starter-dock--sidebar-top {
+    background-color: var(--starter-panel-background);
+}
+
 .layout__dockl.starter-dock-panel--with-top > #dockLeft.starter-dock--sidebar-top ~ *,
 .layout__dockr.starter-dock-panel--with-top > #dockRight.starter-dock--sidebar-top ~ * {
     flex: 1 1 auto;
@@ -643,9 +649,11 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     color: #2c2c2b;
 }
 
-/* 正文 + 面包屑 + 右侧栏同色；左侧文档树与文档标题用暖灰 */
+/* 正文、面包屑、文档标题与标题上方留白用白；侧栏用暖灰 */
 :root[data-theme-mode="light"] .layout__center .protyle,
-:root[data-theme-mode="light"] .layout__center .protyle-breadcrumb {
+:root[data-theme-mode="light"] .layout__center .protyle-breadcrumb,
+:root[data-theme-mode="light"] .layout__center .protyle-title,
+:root[data-theme-mode="light"] .layout__center .protyle-background {
     background-color: #ffffff;
 }
 
@@ -655,9 +663,8 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
 }
 
 :root[data-theme-mode="light"] .layout__dockl .sy__file,
-:root[data-theme-mode="light"] .layout__dockl .sy__file .block__icons,
-:root[data-theme-mode="light"] .layout__center .protyle-title,
-:root[data-theme-mode="light"] .layout__center .protyle-background,
+:root[data-theme-mode="light"] .layout__dockl .block__icons,
+:root[data-theme-mode="light"] .layout__dockr .block__icons,
 :root[data-theme-mode="light"] .protyle-wysiwyg [data-subtype="mindmap"],
 :root[data-theme-mode="light"] .protyle-wysiwyg [data-subtype="mindmap"] svg,
 :root[data-theme-mode="light"] .protyle-wysiwyg .mindmap-view,
@@ -674,8 +681,7 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     background-color: #ffffff;
 }
 
-:root[data-theme-mode="light"] .layout__dockr .sy__outline,
-:root[data-theme-mode="light"] .layout__dockr .sy__outline .block__icons {
+:root[data-theme-mode="light"] .layout__dockr .sy__outline {
     background-color: #ffffff;
 }
 
@@ -1039,11 +1045,18 @@ html.starter-hide-notebook .sy__file > ul.b3-list.fn__flex-column {
     height: 16px;
 }
 
-/* 行内代码：字色与底色；不含代码块（代码块仍用 --starter-panel-background） */
+/* 行内代码：字色与底色；不含代码块（代码块仍用 --starter-panel-background）。
+ * 官方字号 85%，这里再小一点。 */
 .b3-typography :not(pre) > code,
 .protyle-wysiwyg [data-node-id] span[data-type~="code"] {
     color: #cf5148;
     background-color: #f4f3f3;
+    font-size: 80%;
+}
+
+/* 点进表头时编辑层是 .protyle，正文规则会把它刷成白底。改回表头底色。 */
+:root .layout__center [data-type="NodeTable"]:not([custom-sy-table-header-row="false"]) thead .table__cell-editor.protyle {
+    background-color: var(--b3-table-even-background);
 }
 
 /* 块与块之间的上下间距在官方 2px 上再加 0.2em；列表项内部间距不动。

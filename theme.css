@@ -825,7 +825,10 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
 .protyle-wysiwyg .code-block .hljs,
 .b3-typography .code-block .hljs,
 .protyle-wysiwyg [data-type="NodeCodeBlock"] .hljs {
-    line-height: 1.75;
+    /* 官方字号 85%。这里 80%。
+     * 行高不要写在 .hljs 上，必须 inherit。改这个百分比时，下面 .code-block 的 0.8 要一起改。 */
+    font-size: 80%;
+    line-height: inherit;
     /* 官方约 2em 1em 1.6em；四周各加一点，上边仍留给语言栏 */
     padding: 2.4em 1.45em 2.05em !important;
     border-radius: var(--b3-border-radius);
@@ -842,6 +845,26 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     --starter-code-outer-pad: 4px;
     padding: var(--starter-code-outer-pad);
     background-color: transparent;
+    /* 行号对齐：只改这一行的两个数，并让上面 .hljs 的 font-size 与 0.8 一致。
+     *
+     * 思源渲染行号时，在 .code-block 上写死行高：编辑器字号 × 1.625 × 0.85，再取整成像素。
+     * 行号在 .hljs 里面，字号还要再乘官方的 85%。空行号没有自己的高度，靠继承这一像素。
+     * 代码是一整段往下排；行号是一行一个盒子。两边必须共用同一个整数像素，才会一直对齐。
+     *
+     * 曾经错位的写法：
+     * - .hljs 上写 1.6、1.75 这种不带单位的行高。倍数会按行号更小的字号再乘一次，越往下越偏。
+     * - .hljs 上写 1.6em。算出来常有小数（16px 编辑器时是 20.48px）。代码能落在小数像素上，
+     *   每个行号盒子却单独取整，误差累加，大约第 58 行就错开一行。
+     * - 给 .protyle-linenumber__rows 的 span 写 height。自动换行时思源按每行实测高度写
+     *   style="height"，强制高度会把折行接到错误的行号上。
+     *
+     * 现在的做法：行高只写在 .code-block 上，!important 盖过脚本；round(..., 1px) 收成整数像素。
+     * .hljs 只改字号，line-height: inherit，代码和行号共用这一个整数。
+     *
+     * 以后改字号或行高，公式是 round(calc(行高倍数 * 字号比例em), 1px)：
+     * 字号 75%、行高 1.5 就写成 round(calc(1.5 * 0.75em), 1px)，同时 .hljs { font-size: 75% }。
+     * 不要在 .hljs、行号容器或行号 span 上再写 line-height 或 height。 */
+    line-height: round(calc(1.6 * 0.8em), 1px) !important;
 }
 
 .protyle-wysiwyg .code-block:not(pre) > .protyle-action,

@@ -662,8 +662,6 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
 :root[data-theme-mode="light"] .protyle-wysiwyg [data-subtype="mindmap"] svg,
 :root[data-theme-mode="light"] .protyle-wysiwyg .mindmap-view,
 :root[data-theme-mode="light"] .mindmap-view__content,
-:root[data-theme-mode="light"] .protyle-wysiwyg .code-block,
-:root[data-theme-mode="light"] .b3-typography .code-block,
 :root[data-theme-mode="light"] .protyle-wysiwyg [data-type="NodeTable"] thead th,
 :root[data-theme-mode="light"] .protyle-wysiwyg [data-type="NodeTable"] thead td,
 :root[data-theme-mode="light"] .b3-typography table thead th,
@@ -824,6 +822,32 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     line-height: 1.75;
     /* 官方约 2em 1em 1.6em；四周各加一点，上边仍留给语言栏 */
     padding: 2.4em 1.45em 2.05em !important;
+    border-radius: var(--b3-border-radius);
+    background-color: var(--b3-protyle-code-background);
+}
+
+/* 外圈 padding 留给选中高亮（::after 铺满 padding 盒）。
+ * 块本身不铺底色，圆角只画在 .hljs 上；content-box 裁剪会把圆角切成直角。
+ * 语言栏官方 top/left/right: 4px，选择器带 :not(pre)，这里必须同样写上才会挪进底色。
+ * 官方还有 margin-top: -4px，会把 “language” 再顶出圆角底。 */
+.protyle-wysiwyg .code-block:not(pre),
+.b3-typography .code-block:not(pre) {
+    /* 与文本块 [data-node-id] 的 padding: 4px 一致 */
+    --starter-code-outer-pad: 4px;
+    padding: var(--starter-code-outer-pad);
+    background-color: transparent;
+}
+
+.protyle-wysiwyg .code-block:not(pre) > .protyle-action,
+.b3-typography .code-block:not(pre) > .protyle-action {
+    top: var(--starter-code-outer-pad);
+    left: var(--starter-code-outer-pad);
+    right: var(--starter-code-outer-pad);
+}
+
+.protyle-wysiwyg .code-block:not(pre) > .protyle-action .protyle-action__language,
+.b3-typography .code-block:not(pre) > .protyle-action .protyle-action__language {
+    margin-top: 0;
 }
 
 .protyle-wysiwyg [data-node-id].table,

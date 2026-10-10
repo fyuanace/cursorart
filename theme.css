@@ -95,7 +95,7 @@
 :root[data-theme-mode="light"] {
     --b3-theme-background: #f8f8f8;
     --b3-body-background: #f8f8f8;
-    /* 侧栏、文档标题、代码块、表头、思维导图共用；改这一处即可 */
+    /* 侧栏、文档标题、代码块、思维导图共用；改这一处即可。表头另设。 */
     --starter-panel-background: #f9f8f7;
     /* 左文档树、右大纲文字；比正文更浅，改这一处即可 */
     --starter-side-text: #7a7f85;
@@ -683,12 +683,15 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
 :root[data-theme-mode="light"] .protyle-wysiwyg [data-subtype="mindmap"],
 :root[data-theme-mode="light"] .protyle-wysiwyg [data-subtype="mindmap"] svg,
 :root[data-theme-mode="light"] .protyle-wysiwyg .mindmap-view,
-:root[data-theme-mode="light"] .mindmap-view__content,
+:root[data-theme-mode="light"] .mindmap-view__content {
+    background-color: var(--starter-panel-background);
+}
+
 :root[data-theme-mode="light"] .protyle-wysiwyg [data-type="NodeTable"] thead th,
 :root[data-theme-mode="light"] .protyle-wysiwyg [data-type="NodeTable"] thead td,
 :root[data-theme-mode="light"] .b3-typography table thead th,
 :root[data-theme-mode="light"] .b3-typography table thead td {
-    background-color: var(--starter-panel-background);
+    background-color: #f7f6f3;
 }
 
 :root[data-theme-mode="light"] .layout__dockr {
@@ -1094,8 +1097,8 @@ html.starter-hide-notebook .sy__file > ul.b3-list.fn__flex-column {
 }
 
 /* 点进表头时编辑层是 .protyle，正文规则会把它刷成白底。改回表头底色。 */
-:root .layout__center [data-type="NodeTable"]:not([custom-sy-table-header-row="false"]) thead .table__cell-editor.protyle {
-    background-color: var(--b3-table-even-background);
+:root[data-theme-mode="light"] .layout__center [data-type="NodeTable"]:not([custom-sy-table-header-row="false"]) thead .table__cell-editor.protyle {
+    background-color: #f7f6f3;
 }
 
 /* 块与块之间的上下间距在官方 2px 上再加 0.2em；列表项内部间距不动。

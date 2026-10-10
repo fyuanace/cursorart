@@ -570,9 +570,8 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     overflow: hidden;
 }
 
-/* 永久藏起系统的锁定编辑和文档图标；节点还在，收藏星仍插在锁按钮左侧 */
-#layouts .layout__center .protyle-breadcrumb > .block__icon[data-type="readonly"],
-#layouts .layout__center .protyle-breadcrumb > .block__icon[data-type="doc"] {
+/* 永久藏起系统的锁定编辑；节点还在，收藏星仍插在它左侧 */
+#layouts .layout__center .protyle-breadcrumb > .block__icon[data-type="readonly"] {
     display: none !important;
 }
 

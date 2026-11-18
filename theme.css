@@ -11,8 +11,15 @@
  *   └──────────┴───────────────┴─────────────┘
  *
  * 开发：改完后 Network 勾 Disable cache，控制台 location.reload()
- * 左/右 dock 横条在对应侧栏顶部（.layout__dockl / .layout__dockr 内），依赖配套插件
+ * 左/右 dock 横条在对应侧栏底部（.layout__dockl / .layout__dockr 内），依赖配套插件
  */
+
+/* 让思源读取原生窗口按钮高度时拿到像素值，包括 DPI 分档里的 calc()。 */
+@property --starter-topbar-height {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 55px;
+}
 
 :root {
     /*
@@ -174,6 +181,15 @@ body {
 
 html.starter-default-topbar {
     --starter-topbar-height: 42px;
+}
+
+/* Windows 原生按钮使用思源的高度变量，并随当前标题栏一起缩放。 */
+html.window-controls-overlay:has(body.body--toolbar-hide #toolbar) {
+    --b3-ui-panel-height: var(--starter-topbar-height);
+}
+
+html.window-controls-overlay:has(body:not(.body--toolbar-hide) #toolbar) {
+    --b3-ui-toolbar-height: 28px;
 }
 
 body.body--toolbar-hide #toolbar.toolbar {
@@ -444,8 +460,8 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     min-height: 0;
 }
 
-.layout__dockl.starter-dock-panel--with-top > #dockLeft.starter-dock--sidebar-top,
-.layout__dockr.starter-dock-panel--with-top > #dockRight.starter-dock--sidebar-top {
+/* 在融合顶栏模式下，思源对原生竖栏设置了接近整窗的高度。 */
+#layouts .starter-dock-panel--with-top > .starter-dock--sidebar-top:is(#dockLeft, #dockRight) {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
@@ -454,12 +470,11 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
     width: 100%;
     height: var(--starter-topbar-height);
     min-height: var(--starter-topbar-height);
-    margin: 0;
+    margin: auto 0 0;
     padding: 0 4px;
     box-sizing: border-box;
     overflow: hidden;
     order: 1;
-    margin-top: auto;
     border: none;
     background-color: var(--b3-theme-background);
 }
@@ -470,13 +485,6 @@ body.body--toolbar-hide .layout__dockr:not(.layout--float) {
 
 :root[data-theme-mode="light"] .layout__dockr.starter-dock-panel--with-top > #dockRight.starter-dock--sidebar-top {
     background-color: #ffffff;
-}
-
-.layout__dockl.starter-dock-panel--with-top > #dockLeft.starter-dock--sidebar-top ~ *,
-.layout__dockr.starter-dock-panel--with-top > #dockRight.starter-dock--sidebar-top ~ * {
-    flex: 1 1 auto;
-    min-height: 0;
-    min-width: 0;
 }
 
 .layout__dockl > #dockLeft.starter-dock--sidebar-top .dock__items,
